@@ -4,6 +4,52 @@ const fs = require('fs');
 const Promise = require("bluebird");
 
 
+async function getProductInfo(product, details){
+    product_obj = {};
+    product_obj['name'] = product['name'];
+    product_obj['brand'] = product['brand'];
+    product_obj['color'] = product['color'];
+    product_obj['energy-class'] = product['energy-class'];
+    product_obj['description'] = product['description'];
+    product_obj['price'] = product['price'];
+    product_obj['rating'] = product['rating_bazaar'];
+    product_obj['num-reviews'] = product['reviews_bazaar'];
+    product_obj['categories'] = product['category_path'];
+    product_obj['url'] = product['default_url'];
+
+    console.log(product_obj['url']);
+
+    /*console.log("name:", product['name']);
+    console.log("brand:", product['brand']);
+    console.log("color:", product['color']);
+    console.log("energy-class:", product['energy-class']);
+    console.log("description:", product['description']);
+    console.log("price:", product['price']);
+    console.log("rating:", product['rating_bazaar']);
+    console.log("num reviews:", product['reviews_bazaar']);
+    console.log("categories:", product['category_path']);
+    console.log("url:", product['default_url']);*/
+
+    if(details){
+
+        await axios.get("https://www.worten.pt" + product['default_url']).then(resp => {
+            const $ = cheerio.load(resp.data);
+
+            $("li[class='clearfix']").each(function (i, e) {
+                //console.log($(e).find('.details-label').contents().last().text() + ":",
+                //            $(e).find('.details-value').text());
+                product_obj[$(e).find('.details-label').contents().last().text()] = $(e).find('.details-value').text();
+            });
+
+        }).catch(function (error) {
+            console.log(error);
+        });
+        //console.log();
+    }
+
+    scrapedProducts.push(product_obj);
+}
+
 async function getProdutosTipo(url, details = false){
 
     const axiosConfig = {
@@ -42,50 +88,11 @@ async function getProdutosTipo(url, details = false){
             return;
         }
 
-        for(let product of model['products']){
-            
-            product_obj = {};
-            product_obj['name'] = product['name'];
-            product_obj['brand'] = product['brand'];
-            product_obj['color'] = product['color'];
-            product_obj['energy-class'] = product['energy-class'];
-            product_obj['description'] = product['description'];
-            product_obj['price'] = product['price'];
-            product_obj['rating'] = product['rating_bazaar'];
-            product_obj['num-reviews'] = product['reviews_bazaar'];
-            product_obj['categories'] = product['category_path'];
-            product_obj['url'] = product['default_url'];
+        await Promise.map(model['products'],
+            (product) => getProductInfo(product, details),
+            { concurrency: 3 }
+        ).catch((error) => console.log(error));
 
-            /*console.log("name:", product['name']);
-            console.log("brand:", product['brand']);
-            console.log("color:", product['color']);
-            console.log("energy-class:", product['energy-class']);
-            console.log("description:", product['description']);
-            console.log("price:", product['price']);
-            console.log("rating:", product['rating_bazaar']);
-            console.log("num reviews:", product['reviews_bazaar']);
-            console.log("categories:", product['category_path']);
-            console.log("url:", product['default_url']);*/
-
-            if(details){
-                await axios.get("https://www.worten.pt" + product['default_url']).then(resp => {
-                    const $ = cheerio.load(resp.data);
-
-                    $("li[class='clearfix']").each(function (i, e) {
-                        //console.log($(e).find('.details-label').contents().last().text() + ":",
-                        //            $(e).find('.details-value').text());
-                        product_obj[$(e).find('.details-label').contents().last().text()] = $(e).find('.details-value').text();
-                    });
-
-                }).catch(function (error) {
-                    console.log(error);
-                });
-                //console.log();
-            }
-
-            scrapedProducts.push(product_obj);
-
-        }
 
         if(!('max' in model['offset'] || 'offsetMax' in model)){
             console.log("ERROR: No Key 'offset' or 'offsetMax'");
@@ -126,8 +133,8 @@ var scrapedProducts = loadData("resources/wortenData.json");
 //num_started_scrapes = 0;
 
 Promise.map(listUrls,
-    url => getProdutosTipo(url, false),
-    { concurrency: 1 }
+    url => getProdutosTipo(url, true),
+    { concurrency: 2 }
 ).then(() => {
     console.log(scrapedProducts.length);
     storeData(scrapedProducts, "resources/wortenData.json");
