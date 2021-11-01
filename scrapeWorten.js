@@ -1,7 +1,7 @@
 const axios = require('axios');
 const cheerio = require("cheerio");
+const fs = require('fs')
 
-var scrapedProducts = [];
 
 async function getProdutosTipo(url, details = false){
 
@@ -81,16 +81,40 @@ async function getProdutosTipo(url, details = false){
     }
 }
 
+const loadData = (path) => {
+    try {
+        return JSON.parse(fs.readFileSync(path, 'utf8'));
+    } catch (err) {
+        console.error(err);
+        return [];
+    }
+}
+
+const storeData = (data, path) => {
+    try {
+        fs.writeFileSync(path, JSON.stringify(data));
+    } catch (err) {
+        console.error(err);
+    }
+}
+
 const listUrls = ["https://www.worten.pt/grandes-eletrodomesticos/aquecimento-de-agua/esquentadores",
                     "https://www.worten.pt/grandes-eletrodomesticos/aquecimento-de-agua/termoacumuladores"];
+
+
+var scrapedProducts = loadData("resources/wortenData.json");
+
+console.log(scrapedProducts);
+
 
 num_started_scrapes = 0;
 for(let url of listUrls){
     num_started_scrapes++;
-    getProdutosTipo(url, true).then(() => {
+    getProdutosTipo(url, false).then(() => {
         num_started_scrapes--;
         if(num_started_scrapes == 0){
             console.log(scrapedProducts.length, scrapedProducts[0]);
+            storeData(scrapedProducts, "resources/wortenData.json");
         }
     });
 }
