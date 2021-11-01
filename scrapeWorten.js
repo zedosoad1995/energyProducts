@@ -1,6 +1,7 @@
 const axios = require('axios');
 const cheerio = require("cheerio");
-const fs = require('fs')
+const fs = require('fs');
+const Promise = require("bluebird");
 
 
 async function getProdutosTipo(url, details = false){
@@ -116,13 +117,23 @@ const storeData = (data, path) => {
     }
 }
 
-const listUrls = ["https://www.worten.pt/grandes-eletrodomesticos/aquecimento-de-agua/essquentadores",
-                    "https://www.worten.pt/grandes-eletrodomesticos/aquecimento-de-agua/termsoacumuladores"];
+const listUrls = ["https://www.worten.pt/grandes-eletrodomesticos/aquecimento-de-agua/esquentadores",
+                    "https://www.worten.pt/grandes-eletrodomesticos/aquecimento-de-agua/termoacumuladores"];
 
 
 var scrapedProducts = loadData("resources/wortenData.json");
 
-num_started_scrapes = 0;
+//num_started_scrapes = 0;
+
+Promise.map(listUrls,
+    url => getProdutosTipo(url, false),
+    { concurrency: 1 }
+).then(() => {
+    console.log(scrapedProducts.length);
+    storeData(scrapedProducts, "resources/wortenData.json");
+}).catch((error) => console.log(error));
+
+/*
 for(let url of listUrls){
     num_started_scrapes++;
     getProdutosTipo(url, false).then(() => {
@@ -133,3 +144,4 @@ for(let url of listUrls){
         }
     });
 }
+*/
