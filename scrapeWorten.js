@@ -19,6 +19,7 @@ async function getProdutosTipo(url, details = false){
 
         var model;
 
+        var success = true;
         await axios.get(url + "?x-event-type=product_list%3Arefresh&page=" + pageNum, axiosConfig).then(resp => {
 
             for(let module of Object.values(resp.data["modules"])){
@@ -27,7 +28,18 @@ async function getProdutosTipo(url, details = false){
                 }
             }
 
+        }).catch(function (error) {
+            console.log(error);
+            success = false;
         });
+        if(!success){
+            return;
+        }
+
+        if(!('products' in model)){
+            console.log("ERROR: No Key 'products'");
+            return;
+        }
 
         for(let product of model['products']){
             
@@ -64,7 +76,9 @@ async function getProdutosTipo(url, details = false){
                         product_obj[$(e).find('.details-label').contents().last().text()] = $(e).find('.details-value').text();
                     });
 
-                })
+                }).catch(function (error) {
+                    console.log(error);
+                });
                 //console.log();
             }
 
@@ -72,6 +86,10 @@ async function getProdutosTipo(url, details = false){
 
         }
 
+        if(!('max' in model['offset'] || 'offsetMax' in model)){
+            console.log("ERROR: No Key 'offset' or 'offsetMax'");
+            return;
+        }
         if(model['offset']['max'] >= model['offsetMax']){
             lastPage = true;
         }
@@ -98,14 +116,11 @@ const storeData = (data, path) => {
     }
 }
 
-const listUrls = ["https://www.worten.pt/grandes-eletrodomesticos/aquecimento-de-agua/esquentadores",
-                    "https://www.worten.pt/grandes-eletrodomesticos/aquecimento-de-agua/termoacumuladores"];
+const listUrls = ["https://www.worten.pt/grandes-eletrodomesticos/aquecimento-de-agua/essquentadores",
+                    "https://www.worten.pt/grandes-eletrodomesticos/aquecimento-de-agua/termsoacumuladores"];
 
 
 var scrapedProducts = loadData("resources/wortenData.json");
-
-console.log(scrapedProducts);
-
 
 num_started_scrapes = 0;
 for(let url of listUrls){
@@ -113,7 +128,7 @@ for(let url of listUrls){
     getProdutosTipo(url, false).then(() => {
         num_started_scrapes--;
         if(num_started_scrapes == 0){
-            console.log(scrapedProducts.length, scrapedProducts[0]);
+            console.log(scrapedProducts.length);
             storeData(scrapedProducts, "resources/wortenData.json");
         }
     });
