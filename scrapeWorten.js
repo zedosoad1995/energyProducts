@@ -8,12 +8,13 @@ async function getProductInfo(product, details){
     var product_obj = {};
     var exists = false;
 
-    var existingProduct = scrapedProducts.filter(function (el) {
+    var existingProducts = scrapedProducts.filter(function (el) {
         return el.url == product['default_url'];
     });
-    if(existingProduct.length > 0){
+    if(existingProducts.length > 0){
         exists = true;
-        var indexProduct = scrapedProducts.indexOf(existingProduct[0]);
+        //var indexProduct = scrapedProducts.indexOf(existingProduct[0]);
+        var existingProduct = existingProducts[0];
     }
 
     product_obj['name'] = product['name'];
@@ -21,34 +22,37 @@ async function getProductInfo(product, details){
     product_obj['color'] = product['color'];
     product_obj['energy-class'] = product['energy-class'];
     product_obj['description'] = product['description'];
-    product_obj['price'] = product['price'];
     product_obj['rating'] = product['rating_bazaar'];
     product_obj['num-reviews'] = product['reviews_bazaar'];
     product_obj['categories'] = product['category_path'];
     product_obj['url'] = product['default_url'];
 
-    console.log(product_obj['url']);
+    var today = new Date();
+    var todayStr = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+    if(exists){
+        let lastPrice = existingProduct['prices'][existingProduct['prices'].length-1];
+        if(product['price'] != lastPrice['value']){
+            if(todayStr == lastPrice['date']){
+                lastPrice = product['price'];
+            }else{
+                existingProduct['prices'].push({'date': todayStr, 'value': product['price']});
+            }
+        }
+    }else{
+        product_obj['prices'] = [{'date': todayStr, 'value': product['price']}];
+    }
 
-    /*console.log("name:", product['name']);
-    console.log("brand:", product['brand']);
-    console.log("color:", product['color']);
-    console.log("energy-class:", product['energy-class']);
-    console.log("description:", product['description']);
-    console.log("price:", product['price']);
-    console.log("rating:", product['rating_bazaar']);
-    console.log("num reviews:", product['reviews_bazaar']);
-    console.log("categories:", product['category_path']);
-    console.log("url:", product['default_url']);*/
+    console.log(product_obj['url']);
 
     if(details && !exists){
 
         await axios.get("https://www.worten.pt" + product['default_url']).then(resp => {
             const $ = cheerio.load(resp.data);
 
+            product_obj['more-details'] = [];
+
             $("li[class='clearfix']").each(function (i, e) {
-                //console.log($(e).find('.details-label').contents().last().text() + ":",
-                //            $(e).find('.details-value').text());
-                product_obj[$(e).find('.details-label').contents().last().text()] = $(e).find('.details-value').text();
+                product_obj['more-details'][$(e).find('.details-label').contents().last().text()] = $(e).find('.details-value').text();
             });
 
         }).catch(function (error) {
@@ -58,7 +62,7 @@ async function getProductInfo(product, details){
     }
 
     if(exists){
-        scrapedProducts[indexProduct] = product_obj;
+        existingProduct = product_obj;
     }else{
         scrapedProducts.push(product_obj);
     }
@@ -125,7 +129,6 @@ const loadData = (path) => {
     try {
         return JSON.parse(fs.readFileSync(path, 'utf8'));
     } catch (err) {
-        console.error(err);
         return [];
     }
 }
