@@ -5,7 +5,17 @@ const Promise = require("bluebird");
 
 
 async function getProductInfo(product, details){
-    product_obj = {};
+    var product_obj = {};
+    var exists = false;
+
+    var existingProduct = scrapedProducts.filter(function (el) {
+        return el.url == product['default_url'];
+    });
+    if(existingProduct.length > 0){
+        exists = true;
+        var indexProduct = scrapedProducts.indexOf(existingProduct[0]);
+    }
+
     product_obj['name'] = product['name'];
     product_obj['brand'] = product['brand'];
     product_obj['color'] = product['color'];
@@ -30,7 +40,7 @@ async function getProductInfo(product, details){
     console.log("categories:", product['category_path']);
     console.log("url:", product['default_url']);*/
 
-    if(details){
+    if(details && !exists){
 
         await axios.get("https://www.worten.pt" + product['default_url']).then(resp => {
             const $ = cheerio.load(resp.data);
@@ -47,7 +57,11 @@ async function getProductInfo(product, details){
         //console.log();
     }
 
-    scrapedProducts.push(product_obj);
+    if(exists){
+        scrapedProducts[indexProduct] = product_obj;
+    }else{
+        scrapedProducts.push(product_obj);
+    }
 }
 
 async function getProdutosTipo(url, details = false){
@@ -130,8 +144,6 @@ const listUrls = ["https://www.worten.pt/grandes-eletrodomesticos/aquecimento-de
 
 var scrapedProducts = loadData("resources/wortenData.json");
 
-//num_started_scrapes = 0;
-
 Promise.map(listUrls,
     url => getProdutosTipo(url, true),
     { concurrency: 2 }
@@ -139,16 +151,3 @@ Promise.map(listUrls,
     console.log(scrapedProducts.length);
     storeData(scrapedProducts, "resources/wortenData.json");
 }).catch((error) => console.log(error));
-
-/*
-for(let url of listUrls){
-    num_started_scrapes++;
-    getProdutosTipo(url, false).then(() => {
-        num_started_scrapes--;
-        if(num_started_scrapes == 0){
-            console.log(scrapedProducts.length);
-            storeData(scrapedProducts, "resources/wortenData.json");
-        }
-    });
-}
-*/
