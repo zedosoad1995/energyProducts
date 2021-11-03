@@ -4,6 +4,16 @@ const fs = require('fs');
 const Promise = require("bluebird");
 
 
+var numbersKeys = ['Capacidade (L/min)', 'Pressão (bar)', 'Potência (W)', 'Peso', 'Altura', 'Largura', 'Profundidade', 'Temperatura Mínima (ºC)',
+                    'Caudal Min.', 'Caudal Máx.', 'Potência (kW)', 'Pressão máxima (bar)', 'Tubo de Exaustão (mm)', 'Consumo de Gás (Gj/annum)'];
+
+var numbersRemoveEndKeys = {'Temperatura Máxima (ºC)': ' ºC'};
+
+var boolKeys = ['Regulador de temperatura', 'Válvula segurança', 'Válvula de descarga', 'Ecrã Digital',
+                'Regulação débito gás', 'Regulação débito água', 'Comp.paineis solares', 'Interruptor on/off'];
+
+var dateKeys = ['Garantia'];
+
 async function getProductInfo(product, details){
     var product_obj = {};
     var exists = false;
@@ -22,9 +32,9 @@ async function getProductInfo(product, details){
     product_obj['color'] = product['color'];
     product_obj['energy-class'] = product['energy-class'];
     product_obj['description'] = product['description'];
-    product_obj['rating'] = product['rating_bazaar'];
-    product_obj['num-reviews'] = product['reviews_bazaar'];
-    product_obj['categories'] = product['category_path'];
+    product_obj['rating'] = Number(product['rating_bazaar']);
+    product_obj['num-reviews'] = Number(product['reviews_bazaar']);
+    product_obj['categories'] = product['category_path'][product['category_path'].length-1];
     product_obj['url'] = product['default_url'];
 
     var today = new Date();
@@ -49,10 +59,20 @@ async function getProductInfo(product, details){
         await axios.get("https://www.worten.pt" + product['default_url']).then(resp => {
             const $ = cheerio.load(resp.data);
 
-            product_obj['more-details'] = [];
+            product_obj['more-details'] = {};
 
             $("li[class='clearfix']").each(function (i, e) {
-                product_obj['more-details'][$(e).find('.details-label').contents().last().text()] = $(e).find('.details-value').text();
+                let key = $(e).find('.details-label').contents().last().text();
+                product_obj['more-details'][key] = $(e).find('.details-value').text();
+                if(numbersKeys.includes(key)){
+                    product_obj['more-details'][key] = Number(product_obj['more-details'][key]);
+                }
+                else if(key in numbersRemoveEndKeys){
+                    product_obj['more-details'][key] = Number(product_obj['more-details'][key].substring(0, numbersRemoveEndKeys[key].length));
+                }
+                else if(boolKeys.includes(key)){
+                    product_obj['more-details'][key] = (product_obj['more-details'][key] == "Sim") ? true : false;
+                }
             });
 
         }).catch(function (error) {
