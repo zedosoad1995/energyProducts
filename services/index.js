@@ -12,7 +12,7 @@ var boolKeys = ['Regulador de temperatura', 'Válvula segurança', 'Válvula de 
 
 var dateKeys = ['Garantia'];
 
-async function getProductInfo(product, details){
+async function getProductInfo(scrapedProducts, product, details){
     var product_obj = {};
     var exists = false;
 
@@ -88,7 +88,9 @@ async function getProductInfo(product, details){
 }
 
 
-async function getProdutosTipo(url, details = false){
+const getProdutosTipo = async (url, path, details) => {
+
+    var scrapedProducts = loadData(path);
 
     const axiosConfig = {
         headers: {
@@ -130,7 +132,7 @@ async function getProdutosTipo(url, details = false){
 
         // get product details
         await Promise.map(model['products'],
-            (product) => getProductInfo(product, details),
+            (product) => getProductInfo(scrapedProducts, product, details),
             { concurrency: 3 }
         ).catch((error) => console.log(error));
 
@@ -146,6 +148,8 @@ async function getProdutosTipo(url, details = false){
         pageNum++;
 
     }
+
+    return scrapedProducts;
 }
 
 // Helper functions
@@ -157,20 +161,12 @@ const loadData = (path) => {
     }
 }
 
-const storeData = (data, path) => {
-    try {
-        fs.writeFileSync(path, JSON.stringify(data));
-    } catch (err) {
-        console.error(err);
-    }
-}
-
 // Lista numa pasta
 const listUrls = ["https://www.worten.pt/grandes-eletrodomesticos/aquecimento-de-agua/esquentadores",
                     "https://www.worten.pt/grandes-eletrodomesticos/aquecimento-de-agua/termoacumuladores"];
 
 
-var scrapedProducts = loadData("resources/wortenData.json");
+/*var scrapedProducts = loadData("resources/wortenData.json");
 
 // Function que faz scraping e faz update da variavel.
 // Depois gravar e error handling
@@ -180,4 +176,10 @@ Promise.map(listUrls,
 ).then(() => {
     console.log(scrapedProducts.length);
     storeData(scrapedProducts, "resources/wortenData.json");
-}).catch((error) => console.log(error));
+}).catch((error) => console.log(error));*/
+
+console.log(getProdutosTipo);
+
+module.exports = {
+    getProdutosTipo
+}
