@@ -4,7 +4,8 @@ const { wortenScraper } = require('../controllers')
 
 const router = express.Router();
 
-router.get('/blogpost', wortenScraper);
+// TODO: Change to POST
+router.get('/scrapeWorten', wortenScraper);
 
 module.exports = {
     router

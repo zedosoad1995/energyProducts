@@ -11,4 +11,5 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use('/api', router)
 
+// TODO: env
 app.listen(3000, () => console.log('App listening on port 3000!'));
