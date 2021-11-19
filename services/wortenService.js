@@ -1,6 +1,5 @@
 const axios = require('axios');
 const cheerio = require("cheerio");
-const fs = require('fs');
 const Promise = require("bluebird");
 
 
@@ -55,7 +54,7 @@ async function getProductInfo(scrapedProducts, product){
 
     console.log(productObj['url']);
 
-    // Get more details of product
+    // Get more details of product. Assumes these values are static, therefore it only obtains once (when it is a new product)
     if(isNewProduct){
 
         await axios.get("https://www.worten.pt" + product['default_url']).then(resp => {
@@ -63,7 +62,7 @@ async function getProductInfo(scrapedProducts, product){
 
             productObj['more-details'] = {};
 
-            // Get all elements from list (with info about product)
+            // Get all elements from html list (with info about product)
             $("li[class='clearfix']").each(function (i, e) {
                 let key = $(e).find('.details-label').contents().last().text();
                 productObj['more-details'][key] = $(e).find('.details-value').text();
@@ -71,9 +70,14 @@ async function getProductInfo(scrapedProducts, product){
                 // TODO: Funcao para conversao de tipo
                 // Converts into correct type
                 if(numberKeys.includes(key)){
-                    let convValue = Number(productObj['more-details'][key].split(' ')[0].replace(",", ".").replace(/[A-Za-z]/g, ''));
+                    let convValue = Number(productObj['more-details'][key]
+                                    .split(' ')[0]
+                                    .convValue.replace(",", ".")
+                                    .replace(/[A-Za-z]/g, ''));
                     if(!isNaN(convValue)){
                         productObj['more-details'][key] = convValue;
+                    }else{
+                        productObj['more-details'][key] = null;
                     }
                 }
                 else if(boolKeys.includes(key)){
@@ -109,13 +113,12 @@ const getWortenProducts = async (url, scrapedProducts) => {
     while(!lastPage){
 
         var productsInfo;
-
-        var success = true;
+        var pageSuccess = true;
         await axios.get(url + "?x-event-type=product_list%3Arefresh&page=" + pageNum, axiosConfig).then(resp => {
 
             // Find JSON with products
             for(let module of Object.values(resp.data["modules"])){
-                if(module['model']['template'] == 'product_list'){
+                if(module['model']['template'] === 'product_list'){
                     productsInfo = module['model'];
                     break;
                 }
@@ -123,9 +126,10 @@ const getWortenProducts = async (url, scrapedProducts) => {
 
         }).catch(function (error) {
             console.log(error);
-            success = false;
+            pageSuccess = false;
         });
-        if(!success || productsInfo === undefined){
+        if(!pageSuccess || productsInfo === undefined){
+            console.log("Could not find products on page " + pageNum);
             return;
         }
 
@@ -137,7 +141,7 @@ const getWortenProducts = async (url, scrapedProducts) => {
         // get product details
         await Promise.map(productsInfo['products'],
             (product) => getProductInfo(scrapedProducts, product),
-            { concurrency: 3 }
+            { concurrency: 6 }
         ).catch((error) => {
             console.log(error)
         });

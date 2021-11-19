@@ -1,4 +1,4 @@
-const { getProdutosTipo } = require('../services/wortenService');
+const { getWortenProducts } = require('../services/wortenService');
 const Promise = require("bluebird");
 const fs = require('fs');
 
@@ -39,11 +39,12 @@ const wortenScraper = async (req, res, next) => {
 
     // scrape products
     await Promise.map(urls['worten'],
-        url => getProdutosTipo(url, scrapedProducts),
+        url => getWortenProducts(url, scrapedProducts),
         { concurrency: 2 }
     ).catch((error) => {
         console.log(error);
         res.sendStatus(500) && next(error);
+        return;
     });
 
     // save data
