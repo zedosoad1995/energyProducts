@@ -1,6 +1,7 @@
 const { getWortenProducts } = require('../services/wortenService');
 const Promise = require("bluebird");
 const fs = require('fs');
+const {getAllProductUrls, getProductUrlsByDistributor} = require('../db/queries');
 
 const urls = require('../resources/urlsToScrape.json');
 var wortenPath = "./resources/wortenData.json";
@@ -37,8 +38,18 @@ const wortenScraper = async (req, res, next) => {
         return;
     }
 
+    var urls;
+    await getProductUrlsByDistributor('Worten').then((results) => {
+        urls = results.map(result => {
+            return result['fullUrl'];
+        })
+    }).catch((err) => {
+        res.sendStatus(500)
+        throw err;
+    });
+
     // scrape products
-    await Promise.map(urls['worten'],
+    await Promise.map(urls,
         url => getWortenProducts(url, scrapedProducts),
         { concurrency: 2 }
     ).catch((error) => {

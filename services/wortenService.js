@@ -72,7 +72,7 @@ async function getProductInfo(scrapedProducts, product){
                 if(numberKeys.includes(key)){
                     let convValue = Number(productObj['more-details'][key]
                                     .split(' ')[0]
-                                    .convValue.replace(",", ".")
+                                    .replace(",", ".")
                                     .replace(/[A-Za-z]/g, ''));
                     if(!isNaN(convValue)){
                         productObj['more-details'][key] = convValue;
