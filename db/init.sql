@@ -12,12 +12,22 @@ CREATE TABLE IF NOT EXISTS distributors(
     url VARCHAR(255) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS categories(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    url VARCHAR(255) NOT NULL,
+    distributorID INT NOT NULL,
+    FOREIGN KEY (distributorID)
+        REFERENCES distributors (id)
+        ON UPDATE CASCADE ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS products(
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     brand VARCHAR(50) NOT NULL,
     url VARCHAR(255) NOT NULL,
-    category VARCHAR(50) NOT NULL,
+    categoryID INT NOT NULL,
     reviewsID INT,
     distributorID INT NOT NULL,
     FOREIGN KEY (reviewsID)
