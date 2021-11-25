@@ -21,20 +21,21 @@ async function getProductInfo(scrapedProducts, product){
     productObj['color'] = product['color'];
     productObj['energy-class'] = product['energy-class'];
     productObj['description'] = product['description'];
-    productObj['rating'] = Number(product['rating_bazaar']);
-    productObj['num-reviews'] = Number(product['reviews_bazaar']);
+    productObj['rating'] = (isNaN(Number(product['rating_bazaar'])))? null: Number(product['rating_bazaar']);
+    productObj['num-reviews'] = (isNaN(Number(product['reviews_bazaar'])))? null: Number(product['reviews_bazaar']);
     productObj['categories'] = product['category_path'][product['category_path'].length-1];
     productObj['url'] = product['default_url'];
+    productObj['priceToday'] = product['price'];
 
-    var productIdx = scrapedProducts.findIndex(el => el.url == product['default_url']);
-    if(productIdx != -1){
-        isNewProduct = false;
-    }
+    //var productIdx = scrapedProducts.findIndex(el => el.url == product['default_url']);
+    //if(productIdx != -1){
+    //    isNewProduct = false;
+    //}
 
     var today = new Date();
     var todayStr = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
 
-    if(isNewProduct){
+    /*if(isNewProduct){
         productObj['prices'] = [{'date': todayStr, 'value': product['price']}];
     }else{
         productObj['prices'] = scrapedProducts[productIdx]['prices'];
@@ -50,7 +51,7 @@ async function getProductInfo(scrapedProducts, product){
                 productObj['prices'].push({'date': todayStr, 'value': product['price']});
             }
         }
-    }
+    }*/
 
     console.log(productObj['url']);
 
@@ -90,15 +91,20 @@ async function getProductInfo(scrapedProducts, product){
         });
     }
 
-    if(isNewProduct){
+    // Insert new product in DB
+
+
+    scrapedProducts.push(productObj);
+
+    /*if(isNewProduct){
         scrapedProducts.push(productObj);
     }else{
         scrapedProducts[productIdx] = productObj;
-    }
+    }*/
 }
 
 
-const getWortenProducts = async (url, scrapedProducts) => {
+const getWortenProducts = async (url) => {
 
     const axiosConfig = {
         headers: {
@@ -109,6 +115,8 @@ const getWortenProducts = async (url, scrapedProducts) => {
     let pageNum = 1;
 
     lastPage = false;
+
+    var scrapedProducts = [];
 
     while(!lastPage){
 

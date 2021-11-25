@@ -22,6 +22,12 @@ CREATE TABLE IF NOT EXISTS categories(
         ON UPDATE CASCADE ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS prices(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    price DECIMAL(9, 2),
+    date DATE NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS products(
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -30,11 +36,15 @@ CREATE TABLE IF NOT EXISTS products(
     categoryID INT NOT NULL,
     reviewsID INT,
     distributorID INT NOT NULL,
+    priceID INT NOT NULL,
     FOREIGN KEY (reviewsID)
         REFERENCES reviews (id)
         ON UPDATE CASCADE ON DELETE CASCADE,
     FOREIGN KEY (distributorID)
         REFERENCES distributors (id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (priceID)
+        REFERENCES prices (id)
         ON UPDATE CASCADE ON DELETE CASCADE
 );
 
