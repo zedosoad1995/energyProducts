@@ -1,4 +1,5 @@
 const db = require('./config');
+const {getAllIndexes} = require('../utils');
 const util = require('util');
 
 const dbQuery = util.promisify(db.query).bind(db);
@@ -37,7 +38,7 @@ async function getProductUrlsByDistributor(dist){
 }
 
 // Insert Review Row
-async function insertReviewsRow(rating, numReviews){
+/*async function insertReviewsRow(rating, numReviews){
     const query =   `
                     INSERT INTO reviews (rating, numReviews)
                     VALUES (?, ?)
@@ -46,7 +47,7 @@ async function insertReviewsRow(rating, numReviews){
     const res = await dbQuery(query, [rating, numReviews]).catch(error => {
         throw(error);
     })
-}
+}*/
 
 // Insert Distributors Row
 async function insertDistributorsRow(name, url){
@@ -132,42 +133,58 @@ async function insertProductAttributesRow(value, productID, productAttribTypeID)
     })
 }
 
-// Insert Product Rows
-async function insertProductRows(products){
-    // Get list of existing products
-    const urls = products.map(product => {
-        return product['url'];
-    })
-    let query = `
-                SELECT url
-                FROM products
-                WHERE url IN (?);
-                `;
-    let existingUrls = await dbQuery(query, [urls]).catch(error => {
-        throw(error);
-    });
-    newProducts = products.filter(product => {
-        return !existingUrls.includes(product['url']);
-    });
-    existingProducts = products.filter(product => {
-        return existingUrls.includes(product['url']);
-    });
-
-    console.log(products);
-
-    const ratingsProps = products.map(product => {
-        return [product['rating'], product['num-reviews']];
-    });
-
-    console.log(ratingsProps);
-
+function insertReviews(reviewsProps, idxToInsert){
+    let propsToInsert = idxToInsert.map(i => reviewsProps[i]);
+    
     query = `
             INSERT INTO reviews (rating, numReviews)
             VALUES ?;
             `;
-    const res = await dbQuery(query, [ratingsProps]).catch(error => {
+    const res = await dbQuery(query, [propsToInsert]).catch(error => {
         throw(error);
     });
+}
+
+function updateReviews(reviewsProps, reviewsID, idxToUpdate){
+    let propsToUpdate = idxToUpdate.map((i, counter) => [reviewsID[counter], ...reviewsProps[i]]);
+    
+    query = `
+            INSERT INTO reviews 
+            (id, rating, numReviews)
+            VALUES 
+            `;
+    propsToUpdate.forEach(props => {
+        query += "(" + props.join(", ") + "), ";
+    });
+    query = query.substring(0, str.length() - 2);
+    query += ` ON DUPLICATE KEY UPDATE 
+            rating = VALUES(rating), 
+            numReviews = VALUES(numReviews);`
+
+    const res = await dbQuery(query).catch(error => {
+        throw(error);
+    });
+}
+
+// Insert Product Rows
+async function updateInsertProducts(products){
+
+    const urls = products.map(product => product['url']);
+    let query = `
+                SELECT url, reviewsID
+                FROM products
+                WHERE url IN (?);
+                `;
+    let [urlsInDB, reviewsID] = await dbQuery(query, [urls]).catch(error => {
+        throw(error);
+    });
+
+    [idxProductsInDB, idxProductsNotInDB] = getAllIndexes(urls, urlsInDB);
+
+    const reviewsProps = products.map(product => [product['rating'], product['num-reviews']]);
+
+    insertReviews(reviewsProps, idxProductsNotInDB);
+    updateReviews(reviewsProps, reviewsID, idxProductsInDB);
 
     
 }
