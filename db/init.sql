@@ -2,13 +2,13 @@ CREATE DATABASE IF NOT EXISTS energy_products;
 
 CREATE TABLE IF NOT EXISTS reviews(
     id INT AUTO_INCREMENT PRIMARY KEY,
-    rating INT,
+    rating DECIMAL(5, 4),
     numReviews INT
 );
 
 CREATE TABLE IF NOT EXISTS distributors(
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(50) NOT NULL,
     url VARCHAR(255) NOT NULL
 );
 
@@ -25,7 +25,11 @@ CREATE TABLE IF NOT EXISTS categories(
 CREATE TABLE IF NOT EXISTS prices(
     id INT AUTO_INCREMENT PRIMARY KEY,
     price DECIMAL(9, 2),
-    date DATE NOT NULL
+    date DATE NOT NULL,
+    productID INT NOT NULL,
+    FOREIGN KEY (productID)
+        REFERENCES products (id)
+        ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS products(
@@ -36,33 +40,24 @@ CREATE TABLE IF NOT EXISTS products(
     categoryID INT NOT NULL,
     reviewsID INT,
     distributorID INT NOT NULL,
-    priceID INT NOT NULL,
+    FOREIGN KEY (categoryID)
+        REFERENCES categories (id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
     FOREIGN KEY (reviewsID)
         REFERENCES reviews (id)
         ON UPDATE CASCADE ON DELETE CASCADE,
     FOREIGN KEY (distributorID)
         REFERENCES distributors (id)
-        ON UPDATE CASCADE ON DELETE CASCADE,
-    FOREIGN KEY (priceID)
-        REFERENCES prices (id)
         ON UPDATE CASCADE ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS productAttributeTypes(
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    attributeName VARCHAR(100) NOT NULL,
-    datatype VARCHAR(20) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS productAttributes(
     id INT AUTO_INCREMENT PRIMARY KEY,
+    attributeName VARCHAR(100) NOT NULL,
     value INT,
+    datatype VARCHAR(20) NOT NULL,
     productID INT NOT NULL,
-    productAttribTypeID INT NOT NULL,
     FOREIGN KEY (productID)
         REFERENCES products (id)
-        ON UPDATE CASCADE ON DELETE CASCADE,
-    FOREIGN KEY (productAttribTypeID)
-        REFERENCES productAttributeTypes (id)
         ON UPDATE CASCADE ON DELETE CASCADE
 );

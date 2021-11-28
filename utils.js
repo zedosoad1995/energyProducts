@@ -2,8 +2,6 @@ function getAllIndexes(arr, searchVals) {
     var foundIndexes = [];
     var notFoundIndexes = [];
 
-    if(!searchVals.isArray()) return [];
-
     for(var i = 0; i < arr.length; i++){
         if(searchVals.includes(arr[i]))
             foundIndexes.push(i);

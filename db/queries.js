@@ -133,33 +133,33 @@ async function insertProductAttributesRow(value, productID, productAttribTypeID)
     })
 }
 
-function insertReviews(reviewsProps, idxToInsert){
+async function insertReviews(reviewsProps, idxToInsert){
     let propsToInsert = idxToInsert.map(i => reviewsProps[i]);
     
-    query = `
-            INSERT INTO reviews (rating, numReviews)
-            VALUES ?;
-            `;
+    query = `INSERT INTO reviews (rating, numReviews) VALUES ?;`;
     const res = await dbQuery(query, [propsToInsert]).catch(error => {
         throw(error);
     });
 }
 
-function updateReviews(reviewsProps, reviewsID, idxToUpdate){
-    let propsToUpdate = idxToUpdate.map((i, counter) => [reviewsID[counter], ...reviewsProps[i]]);
+async function updateReviews(reviewsProps, reviewsID, idxToUpdate){
+    if(idxToUpdate.length == 0) return;
+
+    let propsToUpdate = idxToUpdate.map((i, counter) => {
+        if(reviewsProps[0] != null || reviewsProps[1] != null)
+            [reviewsID[counter], ...reviewsProps[i]];
+    });
     
-    query = `
-            INSERT INTO reviews 
+    query = `INSERT INTO reviews 
             (id, rating, numReviews)
-            VALUES 
-            `;
+            VALUES `;
     propsToUpdate.forEach(props => {
         query += "(" + props.join(", ") + "), ";
     });
-    query = query.substring(0, str.length() - 2);
+    query = query.substring(0, query.length - 2);
     query += ` ON DUPLICATE KEY UPDATE 
             rating = VALUES(rating), 
-            numReviews = VALUES(numReviews);`
+            numReviews = VALUES(numReviews);`;
 
     const res = await dbQuery(query).catch(error => {
         throw(error);
@@ -179,12 +179,15 @@ async function updateInsertProducts(products){
         throw(error);
     });
 
+    if(urlsInDB == undefined) urlsInDB = [];
+    if(reviewsID == undefined) reviewsID = [];
+
     [idxProductsInDB, idxProductsNotInDB] = getAllIndexes(urls, urlsInDB);
 
     const reviewsProps = products.map(product => [product['rating'], product['num-reviews']]);
+    await insertReviews(reviewsProps, idxProductsNotInDB);
+    await updateReviews(reviewsProps, reviewsID, idxProductsInDB);
 
-    insertReviews(reviewsProps, idxProductsNotInDB);
-    updateReviews(reviewsProps, reviewsID, idxProductsInDB);
 
     
 }
@@ -192,5 +195,5 @@ async function updateInsertProducts(products){
 module.exports = {
     getAllProductUrls,
     getProductUrlsByDistributor,
-    insertProductRows
+    updateInsertProducts
 }

@@ -25,15 +25,15 @@ async function getProductInfo(scrapedProducts, product){
     productObj['num-reviews'] = (isNaN(Number(product['reviews_bazaar'])))? null: Number(product['reviews_bazaar']);
     productObj['categories'] = product['category_path'][product['category_path'].length-1];
     productObj['url'] = product['default_url'];
-    productObj['priceToday'] = product['price'];
+    productObj['price'] = product['price'];
 
     //var productIdx = scrapedProducts.findIndex(el => el.url == product['default_url']);
     //if(productIdx != -1){
     //    isNewProduct = false;
     //}
 
-    var today = new Date();
-    var todayStr = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+    //var today = new Date();
+    //var todayStr = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
 
     /*if(isNewProduct){
         productObj['prices'] = [{'date': todayStr, 'value': product['price']}];
