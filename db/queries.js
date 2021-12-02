@@ -133,8 +133,41 @@ async function insertProductAttributesRow(value, productID, productAttribTypeID)
     })
 }
 
-async function insertReviews(reviewsProps, idxToInsert){
-    let propsToInsert = idxToInsert.map(i => reviewsProps[i]);
+async function getInsertedReviewsID(idxToInsert, isReviewNull){
+    query = `SELECT id
+            FROM reviews
+            WHERE id >= LAST_INSERT_ID();`;
+    let ids = await dbQuery(query).catch(error => {
+        throw(error);
+    });
+
+    ids = JSON.parse(JSON.stringify(ids)).map(id => id['id']);
+
+    let retIds = [];
+    for(let i = 0, j = 0; i < idxToInsert.length; i++){
+        let idx = idxToInsert[i];
+        if(isReviewNull[idx]){
+            retIds.push(null);
+        }else{
+            retIds.push(ids[j]);
+            j++;
+        }
+    }
+
+    return retIds;
+}
+
+async function insertReviews(reviewsProps, idxToInsert, isReviewNull){
+    if(idxToInsert.length == 0) return;
+
+    let propsToInsert = idxToInsert.reduce(
+        function (ret, i) {
+            if(!isReviewNull[i])
+                ret.push(reviewsProps[i]);
+            return ret;
+        }, []);
+
+    if(propsToInsert.length == 0) return;
     
     query = `INSERT INTO reviews (rating, numReviews) VALUES ?;`;
     const res = await dbQuery(query, [propsToInsert]).catch(error => {
@@ -142,14 +175,18 @@ async function insertReviews(reviewsProps, idxToInsert){
     });
 }
 
-async function updateReviews(reviewsProps, reviewsID, idxToUpdate){
+async function updateReviews(reviewsProps, reviewsID, idxToUpdate, isReviewNull){
     if(idxToUpdate.length == 0) return;
 
-    let propsToUpdate = idxToUpdate.map((i, counter) => {
-        if(reviewsProps[0] != null || reviewsProps[1] != null)
-            [reviewsID[counter], ...reviewsProps[i]];
-    });
-    
+    let propsToUpdate = idxToUpdate.reduce(
+        function (ret, i) {
+            if(!isReviewNull[i])
+                ret.push([reviewsID[counter], ...reviewsProps[i]]);
+            return ret;
+        }, []);
+
+    if(propsToUpdate.length == 0) return;
+
     query = `INSERT INTO reviews 
             (id, rating, numReviews)
             VALUES `;
@@ -170,8 +207,7 @@ async function updateReviews(reviewsProps, reviewsID, idxToUpdate){
 async function updateInsertProducts(products){
 
     const urls = products.map(product => product['url']);
-    let query = `
-                SELECT url, reviewsID
+    let query = `SELECT url, reviewsID
                 FROM products
                 WHERE url IN (?);
                 `;
@@ -185,8 +221,11 @@ async function updateInsertProducts(products){
     [idxProductsInDB, idxProductsNotInDB] = getAllIndexes(urls, urlsInDB);
 
     const reviewsProps = products.map(product => [product['rating'], product['num-reviews']]);
-    await insertReviews(reviewsProps, idxProductsNotInDB);
-    await updateReviews(reviewsProps, reviewsID, idxProductsInDB);
+    const isReviewNull = reviewsProps.map(reviewProp => reviewProp.every(el => el === null));
+
+    await insertReviews(reviewsProps, idxProductsNotInDB, isReviewNull);
+    const insertedReviewIDs = await getInsertedReviewsID(idxProductsNotInDB, isReviewNull);
+    await updateReviews(reviewsProps, reviewsID, idxProductsInDB, isReviewNull);
 
 
     
