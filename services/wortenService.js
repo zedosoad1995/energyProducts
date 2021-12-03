@@ -16,6 +16,7 @@ async function getProductInfo(scrapedProducts, product){
     var isNewProduct = true;
 
     // Get basic info
+    productObj['distributor'] = 'Worten';
     productObj['name'] = product['name'];
     productObj['brand'] = product['brand'];
     productObj['color'] = product['color'];

@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS products(
     name VARCHAR(255) NOT NULL,
     brand VARCHAR(50) NOT NULL,
     url VARCHAR(255) NOT NULL,
-    categoryID INT NOT NULL,
+    categoryID INT,
     reviewsID INT,
     distributorID INT NOT NULL,
     FOREIGN KEY (categoryID)
