@@ -28,17 +28,7 @@ const loadData = (path) => {
 }
 
 const wortenScraper = async (req, res, next) => {
-
-    // load data
-    try {
-        var scrapedProducts = loadData(wortenPath);
-    } catch(error) {
-        console.log(error);
-        res.sendStatus(500);
-        return;
-    }
-
-    var urls;
+    let urls;
     await getProductUrlsByDistributor('Worten').then((results) => {
         urls = results.map(result => {
             return result['fullUrl'];
@@ -49,7 +39,7 @@ const wortenScraper = async (req, res, next) => {
     });
 
     // scrape products
-    var scrapedProds = await Promise.map(urls,
+    /*var scrapedProds = await Promise.map(urls,
         url => getWortenProducts(url),
         { concurrency: 2 }
     ).catch((error) => {
@@ -58,20 +48,29 @@ const wortenScraper = async (req, res, next) => {
         return;
     });
 
-    scrapedProds = [].concat.apply([], scrapedProds);
+    scrapedProds = [].concat.apply([], scrapedProds);*/
+
+    const scrapedProds = [
+        {
+            url: '/grandes-eletrodomesticos/aquecimento-de-agua/esquentadores/esquentador-junex-pl-11-vde-11-l-ventilado-gas-butano-propano-7260251',
+            rating: 4.899,
+            'num-reviews': 111
+        },
+        {
+            url: '/grandes-eletrodomesticos/aquecimento-de-agua/esquentadores/esquentador-vulcano-wrd-14-4-kg-23-14-l-atmosferico-gas-natural-7334633',
+            rating: 1,
+            'num-reviews': 1
+        },
+        {
+            url: '/url',
+            rating: 1,
+            'num-reviews': undefined
+        }
+    ];
 
     await updateInsertProducts(scrapedProds).catch(error => {
         console.log(error);
     });
-
-    // save data
-    /*try {
-        storeData(scrapedProducts, wortenPath);
-    } catch(error) {
-        console.log(error);
-        res.sendStatus(500);
-        return;
-    }*/
 
     res.sendStatus(201);
 

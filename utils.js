@@ -1,6 +1,6 @@
 function getAllIndexes(arr, searchVals) {
-    var foundIndexes = [];
-    var notFoundIndexes = [];
+    let foundIndexes = [];
+    let notFoundIndexes = [];
 
     for(var i = 0; i < arr.length; i++){
         if(searchVals.includes(arr[i]))

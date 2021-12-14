@@ -1,6 +1,7 @@
 const db = require('./config');
 const {getAllIndexes} = require('../utils');
 const util = require('util');
+const { map } = require('bluebird');
 
 const dbQuery = util.promisify(db.query).bind(db);
 
@@ -37,102 +38,6 @@ async function getProductUrlsByDistributor(dist){
     return JSON.parse(JSON.stringify(res));
 }
 
-// Insert Review Row
-/*async function insertReviewsRow(rating, numReviews){
-    const query =   `
-                    INSERT INTO reviews (rating, numReviews)
-                    VALUES (?, ?)
-                    `;
-
-    const res = await dbQuery(query, [rating, numReviews]).catch(error => {
-        throw(error);
-    })
-}*/
-
-// Insert Distributors Row
-async function insertDistributorsRow(name, url){
-    const query =   `
-                    INSERT INTO reviews (name, url)
-                    VALUES (?, ?)
-                    `;
-
-    const res = await dbQuery(query, [name, url]).catch(error => {
-        throw(error);
-    })
-}
-
-// Insert Category Row
-async function insertCategoriesRow(name, url, distributorID){
-    const query =   `
-                    INSERT INTO categories (name, url, distributorID)
-                    VALUES (?, ?, ?);
-                    `;
-
-    const res = await dbQuery(query, [name, url, distributorID]).catch(error => {
-        throw(error);
-    })
-}
-
-// Insert Prices Row
-async function insertPricesRow(price, date){
-    const query =   `
-                    INSERT INTO prices (price, date)
-                    VALUES (?, ?)
-                    `;
-
-    const res = await dbQuery(query, [price, date]).catch(error => {
-        throw(error);
-    })
-}
-
-// Insert Products Row
-async function insertProductsRow(name, brand, url, categoryID, reviewsID, distributorID, priceID){
-    const query =   `
-                    INSERT INTO products (name, brand, url, categoryID, reviewsID, distributorID, priceID)
-                    VALUES (?, ?, ?, ?, ?, ?, ?);
-                    `;
-
-    const res = await dbQuery(query, [name, brand, url, categoryID, reviewsID, distributorID, priceID]).catch(error => {
-        throw(error);
-    })
-}
-
-// Insert Prices Row
-async function insertPricesRow(price, date){
-    const query =   `
-                    INSERT INTO prices (price, date)
-                    VALUES (?, ?);
-                    `;
-
-    const res = await dbQuery(query, [price, date]).catch(error => {
-        throw(error);
-    })
-}
-
-// Insert ProductAttributeTypes Row
-async function insertProductAttributeTypesRow(attributeName, datatype){
-    const query =   `
-                    INSERT INTO productAttributeTypes (attributeName, datatype)
-                    VALUES (?, ?);
-                    `;
-
-    const res = await dbQuery(query, [attributeName, datatype]).catch(error => {
-        throw(error);
-    })
-}
-
-// Insert ProductAttributes Row
-async function insertProductAttributesRow(value, productID, productAttribTypeID){
-    const query =   `
-                    INSERT INTO productAttributes (value, productID, productAttribTypeID)
-                    VALUES (?, ?, ?);
-                    `;
-
-    const res = await dbQuery(query, [value, productID, productAttribTypeID]).catch(error => {
-        throw(error);
-    })
-}
-
 async function getInsertedReviewID(idxToInsert, isReviewNull){
     query = `SELECT id
             FROM reviews
@@ -141,7 +46,7 @@ async function getInsertedReviewID(idxToInsert, isReviewNull){
         throw(error);
     });
 
-    ids = JSON.parse(JSON.stringify(ids)).map(id => id['id']);
+    ids = ids.map(id => id['id']);
 
     let retIds = [];
     for(let i = 0, j = 0; i < idxToInsert.length; i++){
@@ -157,48 +62,136 @@ async function getInsertedReviewID(idxToInsert, isReviewNull){
     return retIds;
 }
 
-async function insertReviews(reviewsProps, idxToInsert, isReviewNull){
-    if(idxToInsert.length == 0) return;
+async function getReviewsToInsert_ProdInDB(productsInDB){
 
-    let propsToInsert = idxToInsert.reduce(
-        function (ret, i) {
-            if(!isReviewNull[i])
-                ret.push(reviewsProps[i]);
-            return ret;
+    if(Object.keys(productsInDB).length == 0) return [[], []];
+
+    const urlsInDBWithNewReview = Object.values(productsInDB).reduce(
+        function(obj, product){
+            if(product['rating'] != undefined || product['num-reviews'] != undefined)
+                obj.push(product['url']);
+            return obj;
         }, []);
 
-    if(propsToInsert.length == 0) return;
-    
-    query = `INSERT INTO reviews (rating, numReviews) VALUES ?;`;
-    const res = await dbQuery(query, [propsToInsert]).catch(error => {
+    // Check products without a review that just got one
+    let query = `SELECT id, url 
+                FROM products 
+                WHERE url IN (?) AND reviewsID IS NULL;`;
+    const [idProdToUpdate, urlInDBToInsert] = await dbQuery(query, [urlsInDBWithNewReview])
+    .then(res => {
+        const ret = res.reduce(
+            function(obj, row){
+                obj['id'].push(row['id']);
+                obj['url'].push(row['url']);
+                return obj;
+            }, {'id': [], 'url': []}
+        );
+        return [ret['id'], ret['url']];
+    })
+    .catch(error => {
         throw(error);
     });
+
+    return [
+        urlInDBToInsert.map(url => [productsInDB[url]['rating'], productsInDB[url]['num-reviews']]),
+        idProdToUpdate, 
+        urlsInDBWithNewReview
+    ];
+
 }
 
-async function updateReviews(reviewsProps, reviewsID, idxToUpdate, isReviewNull){
-    if(idxToUpdate.length == 0) return;
+function getReviewsToInsert_ProdNotInDB(productsNotInDB){
+    const ret = Object.values(productsNotInDB).reduce(
+            function(obj, product){
+                if(product['rating'] != undefined || product['num-reviews'] != undefined){
+                    obj['reviewsToInsert_ProdNotInDB'].push([product['rating'], product['num-reviews']]);
+                    obj['hasReview'].push(true);
+                }else{
+                    obj['hasReview'].push(false);
+                }
+                return obj;
+            }, 
+            {'reviewsToInsert_ProdNotInDB': [], 'hasReview': []});
+    
+    return [ret['reviewsToInsert_ProdNotInDB'], ret['hasReview']];
+}
 
-    let propsToUpdate = idxToUpdate.reduce(
-        function (ret, i) {
-            if(!isReviewNull[i])
-                ret.push([reviewsID[counter], ...reviewsProps[i]]);
-            return ret;
-        }, []);
+function getIdReviewToInsert(ids, len, hasReview){
+    const idReviewToInsert = ids.slice(0, len);
 
-    if(propsToUpdate.length == 0) return;
+    let idReviewToInsertWithNull = [];
+    let j = 0;
+    for(let i = 0; i < hasReview.length; i++){
+        if(hasReview[i]){
+            idReviewToInsertWithNull.push(idReviewToInsert[j]);
+            j++;
+        }else{
+            idReviewToInsertWithNull.push(null);
+        }
+    }
 
+    return idReviewToInsertWithNull;
+}
+
+async function insertReviews(productsInDB, productsNotInDB){
+
+    const [reviewsToInsert_ProdInDB, idProdToUpdate, urlsInDBWithNewReview] = 
+        await getReviewsToInsert_ProdInDB(productsInDB);
+
+    const [reviewsToInsert_ProdNotInDB, hasReview] = 
+        getReviewsToInsert_ProdNotInDB(productsNotInDB);
+
+    const reviewsToInsert = [...reviewsToInsert_ProdInDB, ...reviewsToInsert_ProdNotInDB];
+
+    if(reviewsToInsert.length == 0) return [[], [], [], urlsInDBWithNewReview];
+    
+    // Insert
+    let query = `INSERT INTO reviews (rating, numReviews) VALUES ?;`;
+    await dbQuery(query, [reviewsToInsert]).catch(error => {
+        throw(error);
+    });
+
+    // Get Id of Inserted Values
+    query = `SELECT id
+            FROM reviews
+            WHERE id >= LAST_INSERT_ID();`;
+    const ids = await dbQuery(query)
+    .then(res => res.map(row => row['id']))
+    .catch(error => {
+        throw(error);
+    });
+
+    const idReviewToUpdate = ids.slice(0, reviewsToInsert_ProdInDB.length);
+    const idReviewToInsert = getIdReviewToInsert(ids, reviewsToInsert_ProdInDB.length, hasReview);
+
+    return [idProdToUpdate, idReviewToUpdate, idReviewToInsert, urlsInDBWithNewReview];
+}
+
+async function updateReviews(productsInDB, urlsToUpdate){
+    if(Object.keys(productsInDB).length == 0 || urlsToUpdate.length == 0) return;
+
+    let query = `SELECT url, reviewsID
+                FROM products 
+                WHERE url IN (?) AND reviewsID IS NOT NULL`;
+
+    const reviewsToUpdate = await dbQuery(query, [urlsToUpdate])
+    .then(res => res.map(row => {
+        const product = productsInDB[row['url']];
+        return [row['reviewsID'], product['rating'], product['num-reviews']];
+    }))
+    .catch(error => {
+        throw(error);
+    });
+
+    // Update
     query = `INSERT INTO reviews 
             (id, rating, numReviews)
-            VALUES `;
-    propsToUpdate.forEach(props => {
-        query += "(" + props.join(", ") + "), ";
-    });
-    query = query.substring(0, query.length - 2);
-    query += ` ON DUPLICATE KEY UPDATE 
+            VALUES (?) ON DUPLICATE KEY UPDATE
             rating = VALUES(rating), 
             numReviews = VALUES(numReviews);`;
 
-    const res = await dbQuery(query).catch(error => {
+    const res = await dbQuery(query, reviewsToUpdate)
+    .catch(error => {
         throw(error);
     });
 }
@@ -211,6 +204,8 @@ let categoryTranslation = {
 
 
 async function insertProducts(products, reviewsID, idxToInsert){
+
+    if(idxToInsert.length === 0) return;
 
     // get distributorMap
     let distributors = idxToInsert.map((idxProduct) => products[idxProduct]['distributor']);
@@ -275,32 +270,119 @@ async function insertProducts(products, reviewsID, idxToInsert){
     });
 }
 
+async function getUrlToProductId(){
+    let query = `SELECT id, url
+                FROM products;`;
+    let res = await dbQuery(query).catch(error => {
+        throw(error);
+    });
+
+    let urlToId = res.reduce(
+        function(obj, newRow){
+            obj[newRow['url']] = newRow['id'];
+            return obj;
+        }, {}
+    );
+
+    return urlToId;
+}
+
+async function updateTodayPrices(products){
+    let today = new Date();
+    let todayStr = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+
+    // Rows where there was already a price for today
+    let idDateConcatedStr = products.map(product => urlToProductId[product['url']] + todayStr);
+    query = `SELECT A.id AS id, A.productID AS productID
+            FROM (SELECT id AS id, productID AS productID, CONCAT(productID, DATE_FORMAT(date, '%Y-%c-%e')) AS idDateStr
+                    FROM prices) AS A
+            WHERE A.idDateStr IN (?);`;
+    res = await dbQuery(query, [idDateConcatedStr]).catch(error => {
+        throw(error);
+    });
+
+    let idToPrice = products.reduce(
+        function(obj, product){
+            obj[urlToProductId[product['url']]] = product['price'];
+            return obj
+        }, {}
+    )
+
+    pricesToUpdate = res.map(val => [val['id'], idToPrice[val['productID']], today, val['productID']])
+    query = `INSERT INTO prices 
+            (id, price, date, productID)
+            VALUES (?)
+            ON DUPLICATE KEY UPDATE 
+            price = VALUES(price);`;
+    await dbQuery(query, pricesToUpdate).catch(error => {
+        throw(error);
+    });
+}
+
+async function insertNewPrice(products){
+
+    // Get url to productId dictionary
+    let urlToProductId = getUrlToProductId()
+
+    updateTodayPrices(products);
+
+    
+
+
+    // Get today's date
+    // Get idPrice to Update -> check new row that has same date and productId -> WHERE date = date AND id = id OR date = date2 AND id = id2 OR ... ->
+    // -> SELECT id FROM (SELECT id AS id, CONCAT(idProduct, date) AS idDateStr) WHERE idDateStr IN (?)
+    // Insert if first price
+    // 
+}
+
+async function getProductsInDB(products){
+    const urls = products.map(product => product['url']);
+    let query = `SELECT url
+                FROM products
+                WHERE url IN (?);`;
+    const urlsInDB = await dbQuery(query, [urls])
+    .then(res => 
+        res.reduce(
+            function(obj, newRow){
+                obj.push(newRow['url']);
+                return obj;
+            }, []
+        )
+    )
+    .catch(error => {
+        throw(error);
+    });
+
+    const productsDict = products.reduce(
+        function(obj, product){
+            if(urlsInDB.includes(product['url']))
+                obj['productsInDB'][product['url']] = product;
+            else
+                obj['productsNotInDB'][product['url']] = product;
+            return obj;
+        }, {'productsInDB': {}, 'productsNotInDB': {}}
+    );
+
+    return [productsDict['productsInDB'], productsDict['productsNotInDB']]
+}
+
 
 // Insert Product Rows
 async function updateInsertProducts(products){
 
-    const urls = products.map(product => product['url']);
-    let query = `SELECT url, reviewsID
-                FROM products
-                WHERE url IN (?);
-                `;
-    let [urlsInDB, reviewsID] = await dbQuery(query, [urls]).catch(error => {
-        throw(error);
-    });
+    const [productsInDB, productsNotInDB] = await getProductsInDB(products);
 
-    if(urlsInDB == undefined) urlsInDB = [];
-    if(reviewsID == undefined) reviewsID = [];
+    const [idProdToUpdate, idReviewToUpdate, idReviewToInsert, urlsInDBWithNewReview] = 
+        await insertReviews(productsInDB, productsNotInDB);
+    await updateReviews(productsInDB, urlsInDBWithNewReview);
 
-    [idxProductsInDB, idxProductsNotInDB] = getAllIndexes(urls, urlsInDB);
-
-    const reviewsProps = products.map(product => [product['rating'], product['num-reviews']]);
-    const isReviewNull = reviewsProps.map(reviewProp => reviewProp.every(el => el === null));
-
-    await insertReviews(reviewsProps, idxProductsNotInDB, isReviewNull);
-    const insertedReviewIDs = await getInsertedReviewID(idxProductsNotInDB, isReviewNull);
+    /*const insertedReviewIDs = await getInsertedReviewID(idxProductsNotInDB, isReviewNull);
     await updateReviews(reviewsProps, reviewsID, idxProductsInDB, isReviewNull);
 
-    await insertProducts(products, insertedReviewIDs, idxProductsNotInDB)
+    await insertProducts(products, insertedReviewIDs, idxProductsNotInDB);
+
+    await insertNewPrice(products);*/
 
 
 
