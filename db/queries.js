@@ -77,31 +77,30 @@ async function getReviewsToInsert_ProdInDB(productsInDB){
     let query = `SELECT id, url 
                 FROM products 
                 WHERE url IN (?) AND reviewsID IS NULL;`;
-    const [idProdToUpdate, urlInDBToInsert] = await dbQuery(query, [urlsInDBWithNewReview])
+    const {idProdToUpdate, urlInDBToInsert} = await dbQuery(query, [urlsInDBWithNewReview])
     .then(res => {
-        const ret = res.reduce(
+        return res.reduce(
             function(obj, row){
-                obj['id'].push(row['id']);
-                obj['url'].push(row['url']);
+                obj['idProdToUpdate'].push(row['id']);
+                obj['urlInDBToInsert'].push(row['url']);
                 return obj;
-            }, {'id': [], 'url': []}
+            }, {'idProdToUpdate': [], 'urlInDBToInsert': []}
         );
-        return [ret['id'], ret['url']];
     })
     .catch(error => {
         throw(error);
     });
 
-    return [
-        urlInDBToInsert.map(url => [productsInDB[url]['rating'], productsInDB[url]['num-reviews']]),
-        idProdToUpdate, 
-        urlsInDBWithNewReview
-    ];
+    return {
+        reviewsToInsert_ProdInDB: urlInDBToInsert.map(url => [productsInDB[url]['rating'], productsInDB[url]['num-reviews']]),
+        idProdToUpdate: idProdToUpdate, 
+        urlsInDBWithNewReview: urlsInDBWithNewReview
+    };
 
 }
 
 function getReviewsToInsert_ProdNotInDB(productsNotInDB){
-    const ret = Object.values(productsNotInDB).reduce(
+    return Object.values(productsNotInDB).reduce(
             function(obj, product){
                 if(product['rating'] != undefined || product['num-reviews'] != undefined){
                     obj['reviewsToInsert_ProdNotInDB'].push([product['rating'], product['num-reviews']]);
@@ -112,8 +111,6 @@ function getReviewsToInsert_ProdNotInDB(productsNotInDB){
                 return obj;
             }, 
             {'reviewsToInsert_ProdNotInDB': [], 'hasReview': []});
-    
-    return [ret['reviewsToInsert_ProdNotInDB'], ret['hasReview']];
 }
 
 function getIdReviewToInsert(ids, len, hasReview){
@@ -135,10 +132,10 @@ function getIdReviewToInsert(ids, len, hasReview){
 
 async function insertReviews(productsInDB, productsNotInDB){
 
-    const [reviewsToInsert_ProdInDB, idProdToUpdate, urlsInDBWithNewReview] = 
+    const {reviewsToInsert_ProdInDB, idProdToUpdate, urlsInDBWithNewReview} = 
         await getReviewsToInsert_ProdInDB(productsInDB);
 
-    const [reviewsToInsert_ProdNotInDB, hasReview] = 
+    const {reviewsToInsert_ProdNotInDB, hasReview} = 
         getReviewsToInsert_ProdNotInDB(productsNotInDB);
 
     const reviewsToInsert = [...reviewsToInsert_ProdInDB, ...reviewsToInsert_ProdNotInDB];
@@ -147,7 +144,8 @@ async function insertReviews(productsInDB, productsNotInDB){
     
     // Insert
     let query = `INSERT INTO reviews (rating, numReviews) VALUES ?;`;
-    await dbQuery(query, [reviewsToInsert]).catch(error => {
+    await dbQuery(query, [reviewsToInsert])
+    .catch(error => {
         throw(error);
     });
 
@@ -164,7 +162,12 @@ async function insertReviews(productsInDB, productsNotInDB){
     const idReviewToUpdate = ids.slice(0, reviewsToInsert_ProdInDB.length);
     const idReviewToInsert = getIdReviewToInsert(ids, reviewsToInsert_ProdInDB.length, hasReview);
 
-    return [idProdToUpdate, idReviewToUpdate, idReviewToInsert, urlsInDBWithNewReview];
+    return {
+        idProdToUpdate: idProdToUpdate, 
+        idReviewToUpdate: idReviewToUpdate, 
+        idReviewToInsert: idReviewToInsert, 
+        urlsInDBWithNewReview: urlsInDBWithNewReview
+    };
 }
 
 async function updateReviews(productsInDB, urlsToUpdate){
@@ -190,7 +193,7 @@ async function updateReviews(productsInDB, urlsToUpdate){
             rating = VALUES(rating), 
             numReviews = VALUES(numReviews);`;
 
-    const res = await dbQuery(query, reviewsToUpdate)
+    await dbQuery(query, reviewsToUpdate)
     .catch(error => {
         throw(error);
     });
@@ -364,16 +367,19 @@ async function getProductsInDB(products){
         }, {'productsInDB': {}, 'productsNotInDB': {}}
     );
 
-    return [productsDict['productsInDB'], productsDict['productsNotInDB']]
+    return {
+        productsInDB: productsDict['productsInDB'], 
+        productsNotInDB: productsDict['productsNotInDB']
+    };
 }
 
 
 // Insert Product Rows
 async function updateInsertProducts(products){
 
-    const [productsInDB, productsNotInDB] = await getProductsInDB(products);
+    const {productsInDB, productsNotInDB} = await getProductsInDB(products);
 
-    const [idProdToUpdate, idReviewToUpdate, idReviewToInsert, urlsInDBWithNewReview] = 
+    const {idProdToUpdate, idReviewToUpdate, idReviewToInsert, urlsInDBWithNewReview} = 
         await insertReviews(productsInDB, productsNotInDB);
     await updateReviews(productsInDB, urlsInDBWithNewReview);
 
