@@ -52,17 +52,29 @@ const wortenScraper = async (req, res, next) => {
 
     const scrapedProds = [
         {
+            name: 'a',
+            brand: 'brand',
             url: '/grandes-eletrodomesticos/aquecimento-de-agua/esquentadores/esquentador-junex-pl-11-vde-11-l-ventilado-gas-butano-propano-7260251',
+            distributor: 'Worten',
+            categories: 'Esquentadores',
             rating: 4.899,
             'num-reviews': 111
         },
         {
+            name: 'a1',
+            brand: 'brand1',
             url: '/grandes-eletrodomesticos/aquecimento-de-agua/esquentadores/esquentador-vulcano-wrd-14-4-kg-23-14-l-atmosferico-gas-natural-7334633',
+            distributor: 'Worten',
+            categories: 'Esquentadores',
             rating: 1,
             'num-reviews': 1
         },
         {
+            name: 'a2',
+            brand: 'brand2',
             url: '/url',
+            distributor: 'Worten',
+            categories: 'Esquentadores',
             rating: 1,
             'num-reviews': undefined
         }

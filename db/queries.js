@@ -114,7 +114,7 @@ function getReviewsToInsert_ProdNotInDB(productsNotInDB){
 }
 
 function getIdReviewToInsert(ids, len, hasReview){
-    const idReviewToInsert = ids.slice(0, len);
+    const idReviewToInsert = ids.slice(len);
 
     let idReviewToInsertWithNull = [];
     let j = 0;
@@ -205,70 +205,80 @@ let categoryTranslation = {
     'Termoacumuladores': 'Termoacumulador'
 };
 
+async function getDistributorIds(productsNotInDB){
+    const distributorNames = Object.values(productsNotInDB).map((product) => product['distributor']);
+    const uniqueDistributorNames = [ ...new Set(distributorNames)];
 
-async function insertProducts(products, reviewsID, idxToInsert){
-
-    if(idxToInsert.length === 0) return;
-
-    // get distributorMap
-    let distributors = idxToInsert.map((idxProduct) => products[idxProduct]['distributor']);
-    let uniqueDistributors = [ ...new Set(distributors)];
-
-    let query = `SELECT id, name
+    const query = `SELECT id, name
             FROM distributors
             WHERE name IN (?);`;
-    let res = await dbQuery(query, [uniqueDistributors]).catch(error => {
+
+    const distNameToId = await dbQuery(query, [uniqueDistributorNames])
+    .then(res => {
+        return res.reduce(
+            function(ret, el){
+                ret[el['name']] = el['id'];
+                return ret;
+            }, {});
+    })
+    .catch(error => {
         throw(error);
     });
 
-    let distributorsMap = JSON.parse(JSON.stringify(res)).reduce(
-        function(ret, el){
-            ret[el['name']] = el['id'];
-            return ret;
-        }, {});
+    return distributorNames.map((distributorName) => distNameToId[distributorName]);
+}
 
-    let distributorsID = idxToInsert.map((idxProduct) => distributorsMap[products[idxProduct]['distributor']]);
+async function getCategoryIds(productsNotInDB, distributorIds){
+    // TODO: categoryTranslation? How to better deal with that
+    const categoryNames = Object.values(productsNotInDB).map((product) => categoryTranslation[product['categories']]);
+    const uniqueCategoryNames = [ ...new Set(categoryNames)];
 
-    // 
-    let categories = idxToInsert.map((idxProduct) => categoryTranslation[products[idxProduct]['categories']]);
-    let uniqueCategories = [ ...new Set(categories)];
-
-    query = `SELECT id, name, distributorID
+    const query = `SELECT id, name, distributorID
             FROM categories
             WHERE name IN (?);`;
-    res = await dbQuery(query, [uniqueCategories]).catch(error => {
-        throw(error);
-    });
 
-    // categoriesMap is formated like {name1: {distributorID1: id, ...}, ...}
-    let categoriesMap = JSON.parse(JSON.stringify(res)).reduce(
-        function(ret, el){
-            if(!(el['name'] in ret)){
-                ret[el['name']] = {};
+    return await dbQuery(query, [uniqueCategoryNames])
+        .then(res => {
+            return res.reduce(
+                function(obj, category){
+                    const key = category['name'] + category['distributorID'];
+                    obj[key] = category['id'];
+                    return obj;
+                }, {});
+        })
+        .then(categoryNameToId => {
+            let categoryIds = [];
+
+            for(let i = 0; i < categoryNames.length; i++){
+                const key = categoryNames[i] + distributorIds[i];
+
+                if(key in categoryNameToId)
+                    categoryIds.push(categoryNameToId[key]);
+                else
+                    categoryIds.push(null);
             }
-            ret[el['name']][el['distributorID']] = el['id'];
-            return ret;
-        }, {});
+            
+            return categoryIds;
+        })
+        .catch(error => {
+            throw(error);
+        });
 
-    let categoriesID = idxToInsert.map((idxProduct, counter) => {
-        let product = products[idxProduct];
-        let byDistributorMap = categoriesMap[categoryTranslation[product['categories']]];
-        if(!byDistributorMap)
-            return null;
-        return byDistributorMap[distributorsID[counter]];
+}
+
+async function insertProducts(productsNotInDB, idReviewsToInsert){
+
+    if(Object.keys(productsNotInDB).length === 0) return;
+
+    const distributorIds = await getDistributorIds(productsNotInDB);
+    const categoryIds = await getCategoryIds(productsNotInDB, distributorIds);
+    
+    const productsToInsert = Object.values(productsNotInDB).map((product, index) => {
+        return [product['name'], product['brand'], product['url'], categoryIds[index], distributorIds[index], idReviewsToInsert[index]];
     });
 
-    let propsToInsert = idxToInsert.map((idxProduct, index) => {
-        let product = products[idxProduct];
-        return [product['name'], product['brand'], product['url'], categoriesID[index], distributorsID[index], reviewsID[index]];
-    });
-
-    console.log(distributorsID);
-
-    console.log(propsToInsert);
-
-    query = `INSERT INTO products (name, brand, url, categoryID, distributorID, reviewsID) VALUES ?;`;
-    res = await dbQuery(query, [propsToInsert]).catch(error => {
+    query = `INSERT INTO products (name, brand, url, categoryID, distributorID, reviewsID) VALUES (?);`;
+    res = await dbQuery(query, productsToInsert).catch(error => {
         throw(error);
     });
 }
@@ -383,12 +393,9 @@ async function updateInsertProducts(products){
         await insertReviews(productsInDB, productsNotInDB);
     await updateReviews(productsInDB, urlsInDBWithNewReview);
 
-    /*const insertedReviewIDs = await getInsertedReviewID(idxProductsNotInDB, isReviewNull);
-    await updateReviews(reviewsProps, reviewsID, idxProductsInDB, isReviewNull);
+    await insertProducts(productsNotInDB, idReviewToInsert);
 
-    await insertProducts(products, insertedReviewIDs, idxProductsNotInDB);
-
-    await insertNewPrice(products);*/
+    //await insertNewPrice(products);
 
 
 
