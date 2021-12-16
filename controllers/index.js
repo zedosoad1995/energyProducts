@@ -58,7 +58,7 @@ const wortenScraper = async (req, res, next) => {
             distributor: 'Worten',
             categories: 'Esquentadores',
             rating: 4.899,
-            'num-reviews': 111
+            'num-reviews': 1111
         },
         {
             name: 'a1',
@@ -67,7 +67,7 @@ const wortenScraper = async (req, res, next) => {
             distributor: 'Worten',
             categories: 'Esquentadores',
             rating: 1,
-            'num-reviews': 1
+            'num-reviews': 1000
         },
         {
             name: 'a2',
@@ -75,8 +75,8 @@ const wortenScraper = async (req, res, next) => {
             url: '/url',
             distributor: 'Worten',
             categories: 'Esquentadores',
-            rating: 1,
-            'num-reviews': undefined
+            rating: 1.5,
+            'num-reviews': 20
         }
     ];
 
