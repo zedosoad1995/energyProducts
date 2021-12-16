@@ -383,6 +383,25 @@ async function getProductsInDB(products){
     };
 }
 
+async function updateProducts(idProdToUpdate, idReviewToUpdate){
+    if(idProdToUpdate.length == 0) return;
+
+    let productPropsToUpdate = [];
+    for(let i = 0; i < idProdToUpdate.length; i++){
+        productPropsToUpdate.push([idProdToUpdate[i], idReviewToUpdate[i]]);
+    }
+    
+    const query = `INSERT INTO products 
+            (id, reviewsID)
+            VALUES (?) ON DUPLICATE KEY UPDATE
+            reviewsID = VALUES(reviewsID);`;
+    
+    const urlsInDB = await dbQuery(query, productPropsToUpdate)
+    .catch(error => {
+        throw(error);
+    });
+}
+
 
 // Insert Product Rows
 async function updateInsertProducts(products){
@@ -394,6 +413,7 @@ async function updateInsertProducts(products){
     await updateReviews(productsInDB, urlsInDBWithNewReview);
 
     await insertProducts(productsNotInDB, idReviewToInsert);
+    await updateProducts(idProdToUpdate, idReviewToUpdate);
 
     //await insertNewPrice(products);
 
