@@ -193,8 +193,6 @@ async function updateReviews(productsInDB, urlsToUpdate){
         throw(error);
     });
 
-    console.log(reviewsToUpdate);
-
     // Update
     query = `INSERT INTO reviews 
             (id, rating, numReviews)
@@ -287,75 +285,141 @@ async function insertProducts(productsNotInDB, idReviewsToInsert){
     });
 
     query = `INSERT INTO products (name, brand, url, categoryID, distributorID, reviewsID) VALUES ?;`;
-    res = await dbQuery(query, [productsToInsert]).catch(error => {
+    res = await dbQuery(query, [productsToInsert])
+    .catch(error => {
         throw(error);
     });
 }
 
 async function getUrlToProductId(){
-    let query = `SELECT id, url
-                FROM products;`;
-    let res = await dbQuery(query).catch(error => {
-        throw(error);
-    });
+    const query = `SELECT id, url
+                    FROM products;`;
 
-    let urlToId = res.reduce(
-        function(obj, newRow){
-            obj[newRow['url']] = newRow['id'];
+    return await dbQuery(query)
+        .then(res => {
+            return res.reduce(
+                function(urlToProductId, product){
+                    urlToProductId[product['url']] = product['id'];
+                    return urlToProductId;
+                }, {}
+            );
+        })
+        .catch(error => {
+            throw(error);
+        });
+}
+
+function dateToString(date){
+    return date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();
+}
+
+async function insertNewPrice(productsInDB, productsNotInDB){
+
+    const urlToProductId = await getUrlToProductId();
+
+    const today = new Date();
+    const todayStr = dateToString(today);
+
+    const pricesToInsert_ProdNotInDB = Object.values(productsNotInDB).map(product => [product['price'], today, urlToProductId[product['url']]]);
+
+    const {prodIdANDPrice, prodId} = Object.values(productsInDB).reduce(
+        function(obj, product){
+            obj['prodIdANDPrice'].push(urlToProductId[product['url']].toString() + product['price'].toString());
+            obj['prodId'].push(urlToProductId[product['url']]);
             return obj;
+        }, 
+        {prodIdANDPrice: [], prodId: []});
+
+    const prodIdToUrlInDB = Object.keys(productsInDB).reduce(
+        function(prodIdToUrl, url){
+            prodIdToUrl[urlToProductId[url]] = url;
+            return prodIdToUrl;
         }, {}
     );
 
-    return urlToId;
-}
-
-async function updateTodayPrices(products){
-    let today = new Date();
-    let todayStr = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
-
-    // Rows where there was already a price for today
-    let idDateConcatedStr = products.map(product => urlToProductId[product['url']] + todayStr);
-    query = `SELECT A.id AS id, A.productID AS productID
-            FROM (SELECT id AS id, productID AS productID, CONCAT(productID, DATE_FORMAT(date, '%Y-%c-%e')) AS idDateStr
-                    FROM prices) AS A
-            WHERE A.idDateStr IN (?);`;
-    res = await dbQuery(query, [idDateConcatedStr]).catch(error => {
-        throw(error);
-    });
-
-    let idToPrice = products.reduce(
-        function(obj, product){
-            obj[urlToProductId[product['url']]] = product['price'];
-            return obj
-        }, {}
-    )
-
-    pricesToUpdate = res.map(val => [val['id'], idToPrice[val['productID']], today, val['productID']])
-    query = `INSERT INTO prices 
-            (id, price, date, productID)
-            VALUES ?
-            ON DUPLICATE KEY UPDATE 
-            price = VALUES(price);`;
-    await dbQuery(query, [pricesToUpdate]).catch(error => {
-        throw(error);
-    });
-}
-
-async function insertNewPrice(products){
-
-    // Get url to productId dictionary
-    let urlToProductId = getUrlToProductId()
-
-    updateTodayPrices(products);
-
+    // Get prices where the latest price has changed
+    let query = `
+                SELECT m.*
+                FROM products p
+                INNER JOIN (
+                    SELECT *, CONCAT(productID, TRIM(price)+0) AS prodId_Price
+                    FROM prices
+                ) m
+                ON m.productID = p.id
+                INNER JOIN (
+                    SELECT MAX(date) AS date, productID
+                    FROM prices
+                    GROUP BY productID
+                ) m_newest
+                ON m_newest.date = m.date AND m_newest.productID = m.productID
+                WHERE m.prodId_Price NOT IN (?)
+                    AND m.productID IN (?);`;
     
+    const {pricesToInsert_ProdInDB, pricesToUpdate} = await dbQuery(query, [prodIdANDPrice, prodId])
+    .then(prices => {
+        return prices.reduce(
+            function(obj, price){
+                const url = prodIdToUrlInDB[price['productID']];
 
+                if(dateToString(price['date']) == todayStr)
+                    obj['pricesToUpdate'].push([price['id'], productsInDB[url]['price']]);
+                else                
+                    obj['pricesToInsert_ProdInDB'].push([productsInDB[url]['price'], today, price['productID']]);
 
-    // Get today's date
-    // Get idPrice to Update -> check new row that has same date and productId -> WHERE date = date AND id = id OR date = date2 AND id = id2 OR ... ->
-    // -> SELECT id FROM (SELECT id AS id, CONCAT(idProduct, date) AS idDateStr) WHERE idDateStr IN (?)
-    // Insert if first price
-    // 
+                return obj;
+
+            }, {pricesToInsert_ProdInDB: [], pricesToUpdate: []});
+    })
+    .catch(error => {
+        throw(error);
+    });
+
+    query = `SELECT DISTINCT productID FROM prices;`;
+    const newPricesToInsert_ProdInDB = await dbQuery(query)
+    .then(prices => {
+        return prices.map(price => price['productID']);
+    })
+    .then(ids => {
+        let idsToInsert = Object.keys(prodIdToUrlInDB);
+
+        for(let i = 0; i < ids.length; i++){
+            const index = idsToInsert.indexOf(ids[i].toString());
+            if (index > -1)
+                idsToInsert.splice(index, 1);
+        }
+
+        return idsToInsert.map(id => {
+            const url = prodIdToUrlInDB[id];
+            return [productsInDB[url]['price'], today, id]
+        });        
+    })
+    .catch(error => {
+        throw(error);
+    });
+
+    const pricesToInsert = [...pricesToInsert_ProdInDB, ...newPricesToInsert_ProdInDB, ...pricesToInsert_ProdNotInDB];
+
+    // Insert
+    if(pricesToInsert.length > 0){
+        query = `INSERT INTO prices (price, date, productID) VALUES ?;`;
+        await dbQuery(query, [pricesToInsert])
+        .catch(error => {
+            throw(error);
+        });
+    }
+
+    // Update
+    if(pricesToUpdate.length > 0){
+        query = `INSERT INTO prices 
+                (id, price)
+                VALUES ? ON DUPLICATE KEY UPDATE
+                price = VALUES(price);`;
+        
+        await dbQuery(query, [pricesToUpdate])
+        .catch(error => {
+            throw(error);
+        });
+    }
 }
 
 async function getProductsInDB(products){
@@ -425,7 +489,7 @@ async function updateInsertProducts(products){
     await insertProducts(productsNotInDB, idReviewToInsert);
     await updateProducts(idProdToUpdate, idReviewToUpdate);
 
-    //await insertNewPrice(products);
+    await insertNewPrice(productsInDB, productsNotInDB);
 
 
 
