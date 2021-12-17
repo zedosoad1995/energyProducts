@@ -69,7 +69,7 @@ const wortenScraper = async (req, res, next) => {
             categories: 'Esquentadores',
             rating: 1,
             'num-reviews': 1000,
-            price: 1.12
+            price: 1.13
         },
         {
             name: 'a2',
@@ -79,7 +79,37 @@ const wortenScraper = async (req, res, next) => {
             categories: 'Esquentadores',
             rating: 1.5,
             'num-reviews': 20,
-            price: 123
+            price: 124
+        },
+        {
+            name: 'a3',
+            brand: 'brand3',
+            url: '/url2',
+            distributor: 'Worten',
+            categories: 'Esquentadores',
+            rating: 4.20,
+            'num-reviews': 666,
+            price: 124,
+            'more-details': {
+                altura: '1.50',
+                cor: 'verde',
+                tipo: 'AAA'
+            }
+        },
+        {
+            name: 'a4',
+            brand: 'brand4',
+            url: '/url3',
+            distributor: 'Worten',
+            categories: 'Esquentadores',
+            rating: 4.19,
+            'num-reviews': 665,
+            price: 1.45,
+            'more-details': {
+                altura: '0.8',
+                cor: 'azul',
+                tipo: 'A+'
+            }
         }
     ];
 

@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS prices(
 CREATE TABLE IF NOT EXISTS productAttributes(
     id INT AUTO_INCREMENT PRIMARY KEY,
     attributeName VARCHAR(100) NOT NULL,
-    value INT,
+    value VARCHAR(255),
     datatype VARCHAR(20) NOT NULL,
     productID INT NOT NULL,
     FOREIGN KEY (productID)
