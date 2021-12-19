@@ -11,7 +11,7 @@ var boolKeys = ['Regulador de temperatura', 'Válvula segurança', 'Válvula de 
 
 var dateKeys = ['Garantia'];
 
-async function getProductInfo(scrapedProducts, product){
+async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
     var productObj = {};
     var isNewProduct = true;
 
@@ -28,36 +28,12 @@ async function getProductInfo(scrapedProducts, product){
     productObj['url'] = product['default_url'];
     productObj['price'] = product['price'];
 
-    //var productIdx = scrapedProducts.findIndex(el => el.url == product['default_url']);
-    //if(productIdx != -1){
-    //    isNewProduct = false;
-    //}
-
-    //var today = new Date();
-    //var todayStr = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
-
-    /*if(isNewProduct){
-        productObj['prices'] = [{'date': todayStr, 'value': product['price']}];
-    }else{
-        productObj['prices'] = scrapedProducts[productIdx]['prices'];
-
-        let lastPrice = productObj['prices'][productObj['prices'].length-1];
-
-        // Check if price has changed
-        if(product['price'] != lastPrice['value']){
-            // Replace value saved today (extreme case when price changes on the same day)
-            if(todayStr == lastPrice['date']){
-                productObj['prices'][productObj['prices'].length-1] = product['price'];
-            }else{
-                productObj['prices'].push({'date': todayStr, 'value': product['price']});
-            }
-        }
-    }*/
-
     console.log(productObj['url']);
 
+    const hasProductAttributesInDB = urlsWithAttributes.includes(productObj['url']);
+
     // Get more details of product. Assumes these values are static, therefore it only obtains once (when it is a new product)
-    if(isNewProduct){
+    if(!hasProductAttributesInDB){
 
         await axios.get("https://www.worten.pt" + product['default_url']).then(resp => {
             const $ = cheerio.load(resp.data);
@@ -92,20 +68,11 @@ async function getProductInfo(scrapedProducts, product){
         });
     }
 
-    // Insert new product in DB
-
-
     scrapedProducts.push(productObj);
-
-    /*if(isNewProduct){
-        scrapedProducts.push(productObj);
-    }else{
-        scrapedProducts[productIdx] = productObj;
-    }*/
 }
 
 
-const getWortenProducts = async (url) => {
+const getWortenProducts = async (url, urlsWithAttributes) => {
 
     const axiosConfig = {
         headers: {
@@ -123,8 +90,8 @@ const getWortenProducts = async (url) => {
 
         var productsInfo;
         var pageSuccess = true;
-        await axios.get(url + "?x-event-type=product_list%3Arefresh&page=" + pageNum, axiosConfig).then(resp => {
-
+        await axios.get(url + "?x-event-type=product_list%3Arefresh&page=" + pageNum, axiosConfig)
+        .then(resp => {
             // Find JSON with products
             for(let module of Object.values(resp.data["modules"])){
                 if(module['model']['template'] === 'product_list'){
@@ -132,11 +99,12 @@ const getWortenProducts = async (url) => {
                     break;
                 }
             }
-
-        }).catch(function (error) {
+        })
+        .catch(function (error) {
             console.log(error);
             pageSuccess = false;
         });
+
         if(!pageSuccess || productsInfo === undefined){
             console.log("Could not find products on page " + pageNum);
             return;
@@ -149,9 +117,10 @@ const getWortenProducts = async (url) => {
 
         // get product details
         await Promise.map(productsInfo['products'],
-            (product) => getProductInfo(scrapedProducts, product),
+            (product) => getProductInfo(scrapedProducts, product, urlsWithAttributes),
             { concurrency: 6 }
-        ).catch((error) => {
+        )
+        .catch((error) => {
             console.log(error)
         });
 

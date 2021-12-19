@@ -1,46 +1,32 @@
 const { getWortenProducts } = require('../services/wortenService');
 const Promise = require("bluebird");
 const fs = require('fs');
-const {getProductUrlsByDistributor, updateInsertProducts} = require('../db/queries');
+const {getProductUrlsByDistributor, updateInsertProducts, getUrlsInDB} = require('../db/queries');
 
 const urls = require('../resources/urlsToScrape.json');
 var wortenPath = "./resources/wortenData.json";
 
-
-const storeData = (data, path) => {
-    try {
-        fs.writeFileSync(path, JSON.stringify(data));
-    } catch(error) {
-        throw new Error(error);
-    }
-}
-
-const loadData = (path) => {
-    try {
-        if (fs.existsSync(path)) {
-            return JSON.parse(fs.readFileSync(path, 'utf8'));
-        }else{
-            return [];
-        }
-    } catch (error) {
-        throw new Error(error);
-    }
-}
-
 const wortenScraper = async (req, res, next) => {
-    let urls;
-    await getProductUrlsByDistributor('Worten').then((results) => {
-        urls = results.map(result => {
+    const urls = await getProductUrlsByDistributor('Worten')
+    .then((results) => {
+        return results.map(result => {
             return result['fullUrl'];
         })
-    }).catch((err) => {
+    })
+    .catch((err) => {
+        res.sendStatus(500)
+        throw err;
+    });
+
+    const {urlsWithAttributes, urlsNoAttributes} = await getUrlsInDB()
+    .catch((err) => {
         res.sendStatus(500)
         throw err;
     });
 
     // scrape products
     /*var scrapedProds = await Promise.map(urls,
-        url => getWortenProducts(url),
+        url => getWortenProducts(url, urlsWithAttributes),
         { concurrency: 2 }
     ).catch((error) => {
         console.log(error);
@@ -59,7 +45,7 @@ const wortenScraper = async (req, res, next) => {
             categories: 'Esquentadores',
             rating: 4.899,
             'num-reviews': 1111,
-            price: 12344
+            price: 12345
         },
         {
             name: 'a1',

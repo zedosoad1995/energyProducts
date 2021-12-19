@@ -37,9 +37,39 @@ async function getProductUrlsByDistributor(dist){
     return JSON.parse(JSON.stringify(res));
 }
 
+async function getUrlsInDB(){
+    const query = `SELECT prod.url AS url,
+        	        CASE
+                        WHEN attr.productID IS NULL THEN FALSE
+                        ELSE TRUE
+                    END AS hasAttributes
+                    FROM products prod
+                    LEFT JOIN (
+                        SELECT DISTINCT productID
+                        FROM productAttributes
+                    ) attr
+                        ON prod.id = attr.productID;`;
+    
+    return await dbQuery(query)
+        .then(urls => {
+            return urls.reduce((urlsObj, url) => {
+                if(url['hasAttributes'])
+                    urlsObj['urlsWithAttributes'].push(url['url']);
+                else
+                    urlsObj['urlsNoAttributes'].push(url['url']);
+                
+                return urlsObj;
+            }, 
+            {urlsWithAttributes: [], urlsNoAttributes: []});
+        })
+        .catch(error => {
+            throw(error);
+        });
+}
+
 async function getProductsInDB(products){
     const urls = products.map(product => product['url']);
-    let query = `SELECT url
+    const query = `SELECT url
                 FROM products
                 WHERE url IN (?);`;
     const urlsInDB = await dbQuery(query, [urls])
@@ -112,5 +142,6 @@ async function updateInsertProducts(products){
 module.exports = {
     getAllProductUrls,
     getProductUrlsByDistributor,
-    updateInsertProducts
+    updateInsertProducts,
+    getUrlsInDB
 }
