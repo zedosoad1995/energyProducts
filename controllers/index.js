@@ -25,7 +25,7 @@ const wortenScraper = async (req, res, next) => {
     .catch((error) => {
         console.log(error);
         res.sendStatus(500) && next(error);
-        return;
+        throw error;
     });
 
     await updateInsertProducts(scrapedProds, urlsNoAttributes).catch(error => {

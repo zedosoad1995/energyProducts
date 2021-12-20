@@ -85,7 +85,6 @@ async function getFirstPrices_ProdInDB(productsInDB, prodIdToUrl_InDB, today){
 }
 
 async function insertPrices(productsInDB, productsNotInDB, urlToProductId){
-
     const today = new Date();
 
     const pricesToInsert_ProdNotInDB = Object.values(productsNotInDB).map(product => [product['price'], today, urlToProductId[product['url']]]);

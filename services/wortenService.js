@@ -64,7 +64,7 @@ async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
             })
 
         }).catch(function (error) {
-            console.log(error);
+            throw error;
         });
     }
 
@@ -101,7 +101,7 @@ const getWortenProducts = async (url, urlsWithAttributes) => {
             }
         })
         .catch(function (error) {
-            console.log(error);
+            throw error;
             pageSuccess = false;
         });
 
@@ -121,7 +121,7 @@ const getWortenProducts = async (url, urlsWithAttributes) => {
             { concurrency: 6 }
         )
         .catch((error) => {
-            console.log(error)
+            throw error;
         });
 
 

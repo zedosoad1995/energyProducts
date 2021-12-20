@@ -75,6 +75,7 @@ async function insertProducts(productsNotInDB, idReviewsToInsert){
 
     const distributorIds = await getDistributorIds(productsNotInDB);
     const categoryIds = await getCategoryIds(productsNotInDB, distributorIds);
+    console.log('a');
     
     const productsToInsert = Object.values(productsNotInDB).map((product, index) => {
         return [product['name'], product['brand'], product['url'], categoryIds[index], distributorIds[index], idReviewsToInsert[index]];
@@ -100,7 +101,7 @@ async function updateProducts(idProdToUpdate, idReviewToUpdate){
             VALUES ? ON DUPLICATE KEY UPDATE
             reviewsID = VALUES(reviewsID);`;
     
-    const urlsInDB = await dbQuery(query, [productPropsToUpdate])
+    await dbQuery(query, [productPropsToUpdate])
     .catch(error => {
         throw(error);
     });

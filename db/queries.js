@@ -7,6 +7,8 @@ const {insertPrices, updatePrices} = require('./insertUpdateProdHelper/prices');
 const {insertProductAttributes} = require('./insertUpdateProdHelper/productAttributes');
 
 const dbQuery = util.promisify(db.query).bind(db);
+const dbBeginTransaction = util.promisify(db.beginTransaction).bind(db);
+const dbCommit = util.promisify(db.commit).bind(db);
 
 // Get all urls
 async function getAllProductUrls(){
@@ -30,8 +32,9 @@ async function getProductUrlsByDistributor(dist){
                     ON cat.distributorID = dist.id
                     WHERE dist.name IN (?);`;
 
-    const res = await dbQuery(query, [dist]).catch(error => {
-        throw(error);
+    const res = await dbQuery(query, [dist])
+    .catch(error => {
+        throw error;
     })
 
     return JSON.parse(JSON.stringify(res));
@@ -120,28 +123,78 @@ async function getUrlToProductId(){
 }
 
 async function updateInsertProducts(products, urlsNoAttributes){
+    if(products.length == 0) return;
 
     const {productsInDB, productsNotInDB} = await getProductsInDB(products);
-
+    
+    await dbBeginTransaction();
+    
     const {idProdToUpdate, idReviewToUpdate, idReviewToInsert, urlsInDBWithNewReview} = 
-        await insertReviews(productsInDB, productsNotInDB);
-    await updateReviews(productsInDB, urlsInDBWithNewReview);
+        await insertReviews(productsInDB, productsNotInDB)
+        .catch(error => {
+            db.rollback(function() {
+                throw error;
+            });
+        });
+    await updateReviews(productsInDB, urlsInDBWithNewReview)
+    .catch(error => {
+        db.rollback(function() {
+            throw error;
+        });
+    });
 
-    await insertProducts(productsNotInDB, idReviewToInsert);
-    await updateProducts(idProdToUpdate, idReviewToUpdate);
+    await insertProducts(productsNotInDB, idReviewToInsert)
+    .catch(error => {
+        db.rollback(function() {
+            throw error;
+        });
+    });
+    await updateProducts(idProdToUpdate, idReviewToUpdate)
+    .catch(error => {
+        db.rollback(function() {
+            throw error;
+        });
+    });
 
-    const urlToProductId = await getUrlToProductId();
+    const urlToProductId = await getUrlToProductId()
+    .catch(error => {
+        db.rollback(function() {
+            throw error;
+        });
+    });
 
-    const pricesChangedSameDay = await insertPrices(productsInDB, productsNotInDB, urlToProductId);
-    await updatePrices(pricesChangedSameDay);
+    const pricesChangedSameDay = await insertPrices(productsInDB, productsNotInDB, urlToProductId)
+    .catch(error => {
+        db.rollback(function() {
+            throw error;
+        });
+    });
+    await updatePrices(pricesChangedSameDay)
+    .catch(error => {
+        db.rollback(function() {
+            throw error;
+        });
+    });
 
     const productsInDBWithNewAttr = Object.fromEntries(
         Object.entries(productsInDB).filter(
            ([prodKey,]) => urlsNoAttributes.includes(prodKey)
         )
      );
-    await insertProductAttributes(productsNotInDB, urlToProductId, productsInDBWithNewAttr)
 
+    await insertProductAttributes(productsNotInDB, urlToProductId, productsInDBWithNewAttr)
+    .catch(error => {
+        db.rollback(function() {
+            throw error;
+        });
+    });
+
+    dbCommit()
+    .catch(error => {
+        db.rollback(function() {
+            throw error;
+        });
+    });
 }
 
 module.exports = {
