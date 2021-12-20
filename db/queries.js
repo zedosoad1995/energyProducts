@@ -119,7 +119,7 @@ async function getUrlToProductId(){
         });
 }
 
-async function updateInsertProducts(products){
+async function updateInsertProducts(products, urlsNoAttributes){
 
     const {productsInDB, productsNotInDB} = await getProductsInDB(products);
 
@@ -135,7 +135,12 @@ async function updateInsertProducts(products){
     const pricesChangedSameDay = await insertPrices(productsInDB, productsNotInDB, urlToProductId);
     await updatePrices(pricesChangedSameDay);
 
-    await insertProductAttributes(productsNotInDB, urlToProductId)
+    const productsInDBWithNewAttr = Object.fromEntries(
+        Object.entries(productsInDB).filter(
+           ([prodKey,]) => urlsNoAttributes.includes(prodKey)
+        )
+     );
+    await insertProductAttributes(productsNotInDB, urlToProductId, productsInDBWithNewAttr)
 
 }
 

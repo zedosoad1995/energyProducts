@@ -10,10 +10,11 @@ function getAttributeType(str){
         return 'Number';
 }
 
-async function insertProductAttributes(productsNotInDB, urlToProductId){
+async function insertProductAttributes(productsNotInDB, urlToProductId, productsInDBWithNewAttr){
     let prodAttributesToInsert = [];
 
-    Object.values(productsNotInDB).forEach(product => {
+    [...Object.values(productsNotInDB), ...Object.values(productsInDBWithNewAttr)]
+    .forEach(product => {
         if(!('more-details' in product)) return;
 
         const productId = urlToProductId[product['url']];
