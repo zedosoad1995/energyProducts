@@ -33,6 +33,7 @@ async function getProductUrlsByDistributor(dist){
                     WHERE dist.name IN (?);`;
 
     const res = await dbQuery(query, [dist])
+    .then(results => results.map(result => result['fullUrl']))
     .catch(error => {
         throw error;
     })

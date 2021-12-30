@@ -1,0 +1,5 @@
+Re-check SQL statements like "INSERT IGNORE" and ways to insert only when rows are completely different (except id).
+Learn about different nuances, and things like REPLACE or INSERT, KEY DUPLICATE UPDATE.
+May be possible to simplify Queries.
+
+Funcao para inserir valores na tabela muito mais facilmente em fase de teste (array/obj)

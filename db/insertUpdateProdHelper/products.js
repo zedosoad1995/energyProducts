@@ -75,7 +75,6 @@ async function insertProducts(productsNotInDB, idReviewsToInsert){
 
     const distributorIds = await getDistributorIds(productsNotInDB);
     const categoryIds = await getCategoryIds(productsNotInDB, distributorIds);
-    console.log('a');
     
     const productsToInsert = Object.values(productsNotInDB).map((product, index) => {
         return [product['name'], product['brand'], product['url'], categoryIds[index], distributorIds[index], idReviewsToInsert[index]];

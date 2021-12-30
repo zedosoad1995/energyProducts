@@ -123,7 +123,7 @@ async function insertReviews(productsInDB, productsNotInDB){
 }
 
 async function updateReviews(productsInDB, urlsToUpdate){
-    if(Object.keys(productsInDB).length == 0 || urlsToUpdate.length == 0) return;
+    if(Object.keys(productsInDB).length === 0 || urlsToUpdate.length === 0) return;
 
     let query = `SELECT url, reviewsID
                 FROM products 
@@ -137,6 +137,8 @@ async function updateReviews(productsInDB, urlsToUpdate){
     .catch(error => {
         throw(error);
     });
+
+    if(reviewsToUpdate.length === 0) return;
 
     // Update
     query = `INSERT INTO reviews 

@@ -4,7 +4,6 @@ const {getProductUrlsByDistributor, updateInsertProducts, getUrlsInDB} = require
 
 const wortenScraper = async (req, res, next) => {
     const urls = await getProductUrlsByDistributor('Worten')
-    .then(results => results.map(result => result['fullUrl']))
     .catch((err) => {
         res.sendStatus(500)
         throw err;

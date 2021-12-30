@@ -1,0 +1,8 @@
+db/queries.js
+
+func getUrlsInDB
+    product no url NULL
+    product no attributes
+    product 1 attribute
+    product 3 attributes
+    attribute pointing to non-existent product
