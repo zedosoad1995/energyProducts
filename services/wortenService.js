@@ -71,6 +71,42 @@ async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
     scrapedProducts.push(productObj);
 }
 
+function getPageProductsInfo(url, axiosConfig){
+    return axios.get(url, axiosConfig)
+        .then(resp => {
+            // Find JSON with products
+            for(let module of Object.values(resp.data["modules"])){
+                if(module['model']['template'] === 'product_list'){
+                    return module['model'];
+                }
+            }
+        })
+        .catch(err => {
+            throw err;
+        });
+}
+
+const ce =
+{
+    'modules': [
+        {
+            'model': {
+                'template': 'val1'
+            }
+        },
+        {
+            'model': {
+                'template': 'product_list'
+            }
+        },
+        {
+            'model': {
+                'template': 'val2'
+            }
+        },
+    ]
+};
+
 
 const getWortenProducts = async (url, urlsWithAttributes) => {
 
@@ -88,24 +124,10 @@ const getWortenProducts = async (url, urlsWithAttributes) => {
 
     while(!lastPage){
 
-        var productsInfo;
-        var pageSuccess = true;
-        await axios.get(url + "?x-event-type=product_list%3Arefresh&page=" + pageNum, axiosConfig)
-        .then(resp => {
-            // Find JSON with products
-            for(let module of Object.values(resp.data["modules"])){
-                if(module['model']['template'] === 'product_list'){
-                    productsInfo = module['model'];
-                    break;
-                }
-            }
-        })
-        .catch(function (error) {
-            throw error;
-            pageSuccess = false;
-        });
+        const urlPage = url + "?x-event-type=product_list%3Arefresh&page=" + pageNum;
+        var productsInfo = await getPageProductsInfo(urlPage, axiosConfig);
 
-        if(!pageSuccess || productsInfo === undefined){
+        if(productsInfo === undefined){
             console.log("Could not find products on page " + pageNum);
             return;
         }
@@ -143,5 +165,6 @@ const getWortenProducts = async (url, urlsWithAttributes) => {
 }
 
 module.exports = {
-    getWortenProducts
+    getWortenProducts,
+    getPageProductsInfo
 }

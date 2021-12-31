@@ -3,8 +3,13 @@ const util = require('util');
 
 const app = require('../app');
 const db = require('../db/config');
-const {truncateAll} = require('../db/truncateTables')
-const {seed} = require('../db/seed')
+const {truncateAll} = require('../db/truncateTables');
+const {seed} = require('../db/seed');
+
+const {getPageProductsInfo} = require('../services/wortenService');
+
+const axios = require('axios');
+jest.mock('axios');
 
 const dbEnd = util.promisify(db.end).bind(db);
 
@@ -30,13 +35,35 @@ describe('blabla', () => {
         .catch(err => console.log(err));
     });
 
-    it('lol', () => {
-        const response = request(app);
-        expect(1).toBe(1);
+    it('Returns correct Worten Products JSON Info Page', () => {
+        const retJson = {
+            'data': {
+                'modules': [
+                    {
+                        'model': {
+                            'template': 'val1'
+                        }
+                    },
+                    {
+                        'model': {
+                            'template': 'product_list',
+                            'success': ''
+                        }
+                    },
+                    {
+                        'model': {
+                            'template': 'val2'
+                        }
+                    },
+                ]
+            }
+        };
+
+        axios.get.mockResolvedValue(retJson);
+
+        getPageProductsInfo().then(res => {
+            expect(res.success).toBeDefined();
+        });
     });
 
-    it('truncate all test tables', async () => {
-        await truncateAll();
-        expect(1).toBe(1);
-    });
 })

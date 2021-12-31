@@ -24,7 +24,6 @@ async function seed(){
         .catch(err => {
             throw err
         });
-        console.log(query);
     });
 }
 

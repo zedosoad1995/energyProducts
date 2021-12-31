@@ -7,8 +7,6 @@ async function truncateCategories(){
     const queryTruncate = `DELETE FROM categories;`;
     const queryReset = `ALTER TABLE categories AUTO_INCREMENT = 1;`;
 
-    console.log(db.state);
-
     await dbQuery(queryTruncate)
     .then(() => dbQuery(queryReset))
     .catch(error => {

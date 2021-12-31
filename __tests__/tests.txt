@@ -6,3 +6,4 @@ func getUrlsInDB
     product 1 attribute
     product 3 attributes
     attribute pointing to non-existent product
+
