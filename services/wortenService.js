@@ -74,39 +74,25 @@ async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
 function getPageProductsInfo(url, axiosConfig){
     return axios.get(url, axiosConfig)
         .then(resp => {
+
             // Find JSON with products
             for(let module of Object.values(resp.data["modules"])){
+                if(!('model' in module)) continue;
+
                 if(module['model']['template'] === 'product_list'){
+
+                    if(!('products' in module['model']))
+                        throw new Error('No \'products\' key in modules > model.');
+
                     return module['model'];
                 }
             }
+            throw new Error('No \'product_list\' key in modules > model.');
         })
         .catch(err => {
             throw err;
         });
 }
-
-const ce =
-{
-    'modules': [
-        {
-            'model': {
-                'template': 'val1'
-            }
-        },
-        {
-            'model': {
-                'template': 'product_list'
-            }
-        },
-        {
-            'model': {
-                'template': 'val2'
-            }
-        },
-    ]
-};
-
 
 const getWortenProducts = async (url, urlsWithAttributes) => {
 
@@ -127,17 +113,8 @@ const getWortenProducts = async (url, urlsWithAttributes) => {
         const urlPage = url + "?x-event-type=product_list%3Arefresh&page=" + pageNum;
         var productsInfo = await getPageProductsInfo(urlPage, axiosConfig);
 
-        if(productsInfo === undefined){
-            console.log("Could not find products on page " + pageNum);
-            return;
-        }
-
-        if(!('products' in productsInfo)){
-            console.log("ERROR: No Key 'products'");
-            return;
-        }
-
         // get product details
+        // TODO: return val, instead of pass by reference
         await Promise.map(productsInfo['products'],
             (product) => getProductInfo(scrapedProducts, product, urlsWithAttributes),
             { concurrency: 6 }
