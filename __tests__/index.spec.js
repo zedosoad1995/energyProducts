@@ -6,7 +6,7 @@ const db = require('../db/config');
 const {truncateAll} = require('../db/truncateTables');
 const {seed} = require('../db/seed');
 
-const {getPageProductsInfo} = require('../services/wortenService');
+const {getPageProductsInfo, convertProdAttribute} = require('../services/wortenService');
 
 const axios = require('axios');
 jest.mock('axios');
@@ -182,4 +182,47 @@ describe('Function getPageProductsInfo to obtain JSON containing multiple produc
         expect(getPageProductsInfo()).rejects.toThrow();
     });
 
+})
+
+describe('Function convertProdAttribute to convert attribute from product', () => {
+
+    it('Should convert Sim/Nao to true/false (Boolean attribute type)', () => {
+        
+        expect(convertProdAttribute('Sim', 'Bool')).toEqual(true);
+        expect(convertProdAttribute('Não', 'Bool')).toEqual(false);
+    })
+
+    it('Should throw Error, because it has invalid boolean value (Boolean attribute type)', () => {
+        
+        expect(() => convertProdAttribute('Nao', 'Bool')).toThrow();
+    })
+
+    it('Should convert Sim/Nao to true/false (Boolean attribute type)', () => {
+        
+        expect(convertProdAttribute('Sim', 'Bool')).toEqual(true);
+        expect(convertProdAttribute('Não', 'Bool')).toEqual(false);
+    })
+
+    it('Should return the same value as input, when there is an invalid type', () => {
+        
+        expect(convertProdAttribute('123', 'RandomType')).toBe('123');
+    })
+
+    it('Should return the correct converted output for multiple valid inputs (Number attribute type)', () => {
+
+        const testInputOutputs = [["100 Euros", 100], ["    100 Euros asdds", 100], ["100,2 Euros", 100.2], ["2Euros", 2], [".2Euros", 0.2]];
+        
+        testInputOutputs.forEach(([input, output]) => {
+            expect(convertProdAttribute(input, 'Number')).toBe(output);
+        })
+    })
+
+    it('Should throw exception for multiple invalid inputs (Number attribute type)', () => {
+
+        const testInputs = ["2r4","text", "a2"];
+        
+        testInputs.forEach(input => {
+            expect(() => convertProdAttribute(input, 'Number')).toThrow();
+        })
+    })
 })

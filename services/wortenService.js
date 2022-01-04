@@ -1,19 +1,41 @@
 const axios = require('axios');
 const cheerio = require("cheerio");
 const Promise = require("bluebird");
+const {Worten} = require('./data/attributesTypes.json');
 
+const numberKeys = Worten['Numbers'];
+const boolKeys = Worten['Booleans'];
 
-var numberKeys = ['Capacidade (L/min)', 'Pressão (bar)', 'Potência (W)', 'Peso', 'Altura', 'Largura', 'Profundidade', 'Temperatura Mínima (ºC)',
-                    'Caudal Min.', 'Caudal Máx.', 'Potência (kW)', 'Pressão máxima (bar)', 'Tubo de Exaustão (mm)', 'Consumo de Gás (Gj/annum)', 'Temperatura Máxima (ºC)'];
+function convertProdAttribute(val, type){
+    if(type === 'Number'){
+        // TODO: Deal with format number1/number2. Maybe return a list [number1, number2]. Deal with the insertion in DB.
+        const convValueStr = val.trim()
+                            .split(' ')[0]
+                            .replace(/[A-Za-z]/g, ' ')
+                            .replace(",", ".");
 
-var boolKeys = ['Regulador de temperatura', 'Válvula segurança', 'Válvula de descarga', 'Ecrã Digital',
-                'Regulação débito gás', 'Regulação débito água', 'Comp.paineis solares', 'Interruptor on/off'];
+        const convValue = Number(convValueStr);
+                
+        if(convValueStr.trim().length === 0 || convValueStr[0] === ' ' || isNaN(convValue)) 
+            throw new Error(`Invalid format for attribute type Number. Value received: ${val}`);
 
-var dateKeys = ['Garantia'];
+        return convValue;
+
+    }else if(type === 'Bool'){
+        if(val === 'Sim'){
+            return true;
+        }else if(val === 'Não'){
+            return false;
+        }else{
+            throw new Error(`Invalid boolean value to convert. It can only have the following values: Sim, Não.\nInstead it has the value: ${val}`);
+        }
+    }
+
+    return val
+}
 
 async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
-    var productObj = {};
-    var isNewProduct = true;
+    let productObj = {};
 
     // Get basic info
     productObj['distributor'] = 'Worten';
@@ -41,26 +63,15 @@ async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
             productObj['more-details'] = {};
 
             // Get all elements from html list (with info about product)
-            $("li[class='clearfix']").each(function (i, e) {
-                let key = $(e).find('.details-label').contents().last().text();
-                productObj['more-details'][key] = $(e).find('.details-value').text();
+            $("li[class='clearfix']").each(function (_, e) {
+                const key = $(e).find('.details-label').contents().last().text();
+                const attrValue = $(e).find('.details-value').text();
 
-                // TODO: Funcao para conversao de tipo
-                // Converts into correct type
-                if(numberKeys.includes(key)){
-                    let convValue = Number(productObj['more-details'][key]
-                                    .split(' ')[0]
-                                    .replace(",", ".")
-                                    .replace(/[A-Za-z]/g, ''));
-                    if(!isNaN(convValue)){
-                        productObj['more-details'][key] = convValue;
-                    }else{
-                        productObj['more-details'][key] = null;
-                    }
-                }
-                else if(boolKeys.includes(key)){
-                    productObj['more-details'][key] = (productObj['more-details'][key] == "Sim") ? true : false;
-                }
+                let attrType = 'NoType';
+                if(numberKeys.includes(key)) attrType = 'Number'
+                else if(boolKeys.includes(key)) attrType = 'Bool'
+
+                productObj['more-details'][key] = convertProdAttribute(attrValue, attrType);
             })
 
         }).catch(function (error) {
@@ -94,7 +105,7 @@ function getPageProductsInfo(url, axiosConfig){
         });
 }
 
-const getWortenProducts = async (url, urlsWithAttributes) => {
+async function getWortenProducts(url, urlsWithAttributes){
 
     const axiosConfig = {
         headers: {
@@ -106,12 +117,12 @@ const getWortenProducts = async (url, urlsWithAttributes) => {
 
     lastPage = false;
 
-    var scrapedProducts = [];
+    let scrapedProducts = [];
 
     while(!lastPage){
 
         const urlPage = url + "?x-event-type=product_list%3Arefresh&page=" + pageNum;
-        var productsInfo = await getPageProductsInfo(urlPage, axiosConfig);
+        let productsInfo = await getPageProductsInfo(urlPage, axiosConfig);
 
         // get product details
         // TODO: return val, instead of pass by reference
@@ -123,19 +134,14 @@ const getWortenProducts = async (url, urlsWithAttributes) => {
             throw error;
         });
 
-
-        if(!('max' in productsInfo['offset'] && 'offsetMax' in productsInfo)){
-            console.log("ERROR: No Key 'offset' or 'offsetMax'");
-            return;
-        }
+        if(!('offset' in productsInfo && 'max' in productsInfo['offset'] && 'offsetMax' in productsInfo))
+            throw new Error("No Key 'offset' or 'offsetMax'");
 
         // Check last page
-        if(productsInfo['offset']['max'] >= productsInfo['offsetMax']){
+        if(productsInfo['offset']['max'] >= productsInfo['offsetMax'])
             lastPage = true;
-        }
 
         pageNum++;
-
     }
 
     return scrapedProducts;
@@ -143,5 +149,6 @@ const getWortenProducts = async (url, urlsWithAttributes) => {
 
 module.exports = {
     getWortenProducts,
-    getPageProductsInfo
+    getPageProductsInfo,
+    convertProdAttribute
 }
