@@ -10,22 +10,9 @@ const dbQuery = util.promisify(db.query).bind(db);
 const dbBeginTransaction = util.promisify(db.beginTransaction).bind(db);
 const dbCommit = util.promisify(db.commit).bind(db);
 
-// Get all urls
-async function getAllProductUrls(){
-    const query =   `SELECT dist.name AS distributorName, cat.name AS categoryName, CONCAT(dist.url, cat.url) AS fullUrl
-                    FROM categories cat
-                    INNER JOIN distributors dist
-                    ON cat.distributorID = dist.id;`;
-
-    const res = await dbQuery(query).catch(error => {
-        throw(error);
-    })
-
-    return JSON.parse(JSON.stringify(res));
-}
-
+// TODO: optional parameters dist
 // Get urls by distributor
-async function getProductUrlsByDistributor(dist){
+async function getProductCatalogUrls(dist){
     const query =   `SELECT dist.name AS distributorName, cat.name AS categoryName, CONCAT(dist.url, cat.url) AS fullUrl
                     FROM categories cat
                     INNER JOIN distributors dist
@@ -41,7 +28,7 @@ async function getProductUrlsByDistributor(dist){
     return JSON.parse(JSON.stringify(res));
 }
 
-async function getUrlsInDB(){
+async function getProductUrlsInDB(dist){
     const query = `SELECT prod.url AS url,
         	        CASE
                         WHEN attr.productID IS NULL THEN FALSE
@@ -52,9 +39,12 @@ async function getUrlsInDB(){
                         SELECT DISTINCT productID
                         FROM productAttributes
                     ) attr
-                        ON prod.id = attr.productID;`;
+                        ON prod.id = attr.productID
+                    INNER JOIN distributors dist
+                        ON prod.distributorID = dist.id
+                    WHERE dist.name IN (?);`;
     
-    return await dbQuery(query)
+    return await dbQuery(query, [dist])
         .then(urls => {
             return urls.reduce((urlsObj, url) => {
                 if(url['hasAttributes'])
@@ -177,6 +167,8 @@ async function updateInsertProducts(products, urlsNoAttributes){
         });
     });
 
+    // TODO: async then
+
     const productsInDBWithNewAttr = Object.fromEntries(
         Object.entries(productsInDB).filter(
            ([prodKey,]) => urlsNoAttributes.includes(prodKey)
@@ -199,8 +191,7 @@ async function updateInsertProducts(products, urlsNoAttributes){
 }
 
 module.exports = {
-    getAllProductUrls,
-    getProductUrlsByDistributor,
+    getProductCatalogUrls,
     updateInsertProducts,
-    getUrlsInDB
+    getProductUrlsInDB
 }

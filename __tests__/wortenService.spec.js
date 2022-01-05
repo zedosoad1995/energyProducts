@@ -1,39 +1,12 @@
-const request = require('supertest');
-const util = require('util');
-
+//const request = require('supertest');
 //const app = require('../app');
-const db = require('../db/config');
-const {truncateAll} = require('../db/truncateTables');
-const {seed} = require('../db/seed');
 
 const {getPageProductsInfo, convertProdAttribute} = require('../services/wortenService');
 
 const axios = require('axios');
 jest.mock('axios');
 
-const dbEnd = util.promisify(db.end).bind(db);
-
-function waitFor(conditionFunction) {
-    const poll = resolve => {
-        if(conditionFunction()) resolve();
-        else setTimeout(_ => poll(resolve), 400);
-    }
-  
-    return new Promise(poll);
-}
-
 describe('Function getPageProductsInfo to obtain JSON containing multiple products from one page of Worten.', () => {
-
-    beforeAll(async () => {
-        await waitFor(() => db.state === 'authenticated');
-        await truncateAll();
-        await seed();
-    });
-
-    afterAll(async () => {
-        await dbEnd()
-        .catch(err => console.log(err));
-    });
 
     it('Should return Worten Products JSON Info Page', () => {
         const retJson = {

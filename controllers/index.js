@@ -1,15 +1,15 @@
 const { getWortenProducts } = require('../services/wortenService');
 const Promise = require("bluebird");
-const {getProductUrlsByDistributor, updateInsertProducts, getUrlsInDB} = require('../db/queries');
+const {getProductCatalogUrls, updateInsertProducts, getProductUrlsInDB} = require('../db/queries');
 
-const wortenScraper = async (req, res, next) => {
-    const urls = await getProductUrlsByDistributor('Worten')
+const wortenScraper = async (_, res, next) => {
+    const urls = await getProductCatalogUrls('Worten')
     .catch((err) => {
         res.sendStatus(500)
         throw err;
     });
 
-    const {urlsWithAttributes, urlsNoAttributes} = await getUrlsInDB()
+    const {urlsWithAttributes, urlsNoAttributes} = await getProductUrlsInDB('Worten')
     .catch((err) => {
         res.sendStatus(500)
         throw err;

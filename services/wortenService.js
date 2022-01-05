@@ -113,6 +113,7 @@ async function getWortenProducts(url, urlsWithAttributes){
             'x-render-events': 'product_filters:changed',
         }
     };
+    
     let pageNum = 1;
 
     lastPage = false;
