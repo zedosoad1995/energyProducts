@@ -1,5 +1,5 @@
 const db = require('../db/config');
-const {truncateAll, fillCategories, fillDistributors, fillProductAttributes, fillProducts} = require('../db/truncateTables');
+const {truncateAll, categories, distributors, prices, products, productAttributes, reviews} = require('../db/truncateTables');
 const {seed} = require('../db/seed');
 const {getProductCatalogUrls, getProductUrlsInDB} = require('../db/queries.js');
 
@@ -25,10 +25,10 @@ describe('Function getProductCatalogUrls, to get list of all complete url paths 
 
     it('should return correct list of all full paths of distributor', async () => {
         categoriesData = [['name1', '/url1', 1], ['name2', '/url2', 1], ['name3', '/url3', 2]];
-        distributorsData = [['dist1', 'base1'], ['dist2', 'base2']];
+        distributorsData = [[1, 'dist1', 'base1'], [2, 'dist2', 'base2']];
 
-        await fillDistributors(distributorsData);
-        await fillCategories(categoriesData);
+        await distributors.fill(distributorsData);
+        await categories.fill(categoriesData);
 
         expect(getProductCatalogUrls('dist1')).resolves.toStrictEqual(['base1/url1', 'base1/url2']);
         expect(getProductCatalogUrls('dist2')).resolves.toStrictEqual(['base2/url3']);
@@ -45,13 +45,13 @@ describe('Function getProductCatalogUrls, to get list of all complete url paths 
         distributorsData = [['dist1', 'base1'], ['dist2', 'base2']];
 
         await truncateAll();
-        await fillDistributors(distributorsData);
+        await distributors.fill(distributorsData);
 
         expect(getProductCatalogUrls('dist1')).resolves.toStrictEqual([]);
     });
 });
 
-describe('Function getProductUrlsInDB, to get list of all complete url paths from a specific distributor (joining tables categories and distributors)', () => {
+describe('Function getProductUrlsInDB', () => {
 
     afterAll(async () => {
         await dbEnd()
@@ -59,14 +59,14 @@ describe('Function getProductUrlsInDB, to get list of all complete url paths fro
     });
 
     it('should return correct list of all full paths of distributor', async () => {
-        distributorsData = [['dist1', 'base1'], ['dist2', 'base2']];
+        distributorsData = [[1, 'dist1', 'base1'], [2, 'dist2', 'base2']];
         productsData = [['prod1', 'brand1', 'url1', null, null, 1], ['prod2', 'brand2', 'url2', null, null, 1],
                         ['prod3', 'brand2', 'url3', null, null, 1], ['prod4', 'brand1', 'url4', null, null, 2]];
         productAttributesData = [['attr1', 'val1', 'type', 1], ['attr2', 'val2', 'type', 1], ['attr3', 'val3', 'type', 2], ['attr4', 'val4', 'type', 4]];
 
-        await fillDistributors(distributorsData);
-        await fillProducts(productsData);
-        await fillProductAttributes(productAttributesData);
+        await distributors.fill(distributorsData);
+        await products.fill(productsData);
+        await productAttributes.fill(productAttributesData);
 
         getProductUrlsInDB('dist1')
         .then(({urlsWithAttributes, urlsNoAttributes}) => {

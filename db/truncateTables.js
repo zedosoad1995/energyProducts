@@ -3,9 +3,15 @@ const util = require('util');
 
 const dbQuery = util.promisify(db.query).bind(db);
 
-async function truncateCategories(){
-    const queryTruncate = `DELETE FROM categories;`;
-    const queryReset = `ALTER TABLE categories AUTO_INCREMENT = 1;`;
+function DbModel(tableName, columnNames, isReferenced){
+    this.tableName = tableName;
+    this.columnNames = columnNames;
+    this.isReferenced = isReferenced;
+}
+
+DbModel.prototype.truncate = async function(){
+    const queryTruncate = (this.isReferenced ? `DELETE FROM ` : `TRUNCATE TABLE `) + `${this.tableName};`;
+    const queryReset = `ALTER TABLE ${this.tableName} AUTO_INCREMENT = 1;`;
 
     await dbQuery(queryTruncate)
     .then(dbQuery(queryReset))
@@ -14,63 +20,13 @@ async function truncateCategories(){
     })
 }
 
-async function truncateDistributors(){
-    const queryTruncate = `DELETE FROM distributors;`;
-    const queryReset = `ALTER TABLE distributors AUTO_INCREMENT = 1;`;
+DbModel.prototype.insert = async function(data){
 
-    await dbQuery(queryTruncate)
-    .then(dbQuery(queryReset))
-    .catch(error => {
-        throw(error);
-    })
-}
+    if(data.length === 0) return;
 
-async function truncatePrices(){
-    const queryTruncate = `TRUNCATE TABLE prices;`;
-    const queryReset = `ALTER TABLE prices AUTO_INCREMENT = 1;`;
+    const colsToInsert = (data[0].length === this.columnNames.length) ? this.columnNames : this.columnNames.slice(1);
 
-    await dbQuery(queryTruncate)
-    .then(dbQuery(queryReset))
-    .catch(error => {
-        throw(error);
-    })
-}
-
-async function truncateProductAttributes(){
-    const queryTruncate = `TRUNCATE TABLE productAttributes;`;
-    const queryReset = `ALTER TABLE productAttributes AUTO_INCREMENT = 1;`;
-
-    await dbQuery(queryTruncate)
-    .then(dbQuery(queryReset))
-    .catch(error => {
-        throw(error);
-    })
-}
-
-async function truncateProducts(){
-    const queryTruncate = `DELETE FROM products;`;
-    const queryReset = `ALTER TABLE products AUTO_INCREMENT = 1;`;
-
-    await dbQuery(queryTruncate)
-    .then(dbQuery(queryReset))
-    .catch(error => {
-        throw(error);
-    })
-}
-
-async function truncateReviews(){
-    const queryTruncate = `DELETE FROM reviews;`;
-    const queryReset = `ALTER TABLE reviews AUTO_INCREMENT = 1;`;
-
-    await dbQuery(queryTruncate)
-    .then(dbQuery(queryReset))
-    .catch(error => {
-        throw(error);
-    })
-}
-
-async function insertCategories(data){
-    const query = `INSERT INTO categories (name, url, distributorID) VALUES ?;`;
+    const query = `INSERT INTO ${this.tableName} (${colsToInsert.join()}) VALUES ?;`;
 
     await dbQuery(query, [data])
     .catch(error => {
@@ -78,85 +34,40 @@ async function insertCategories(data){
     })
 }
 
-async function insertDistributors(data){
-    const query = `INSERT INTO distributors (name, url) VALUES ?;`;
-
-    await dbQuery(query, [data])
+DbModel.prototype.fill = async function(data){
+    await this.truncate()
+    .then(this.insert(data))
     .catch(error => {
         throw(error);
     })
 }
 
-async function insertProducts(data){
-    const query = `INSERT INTO products (name, brand, url, categoryID, reviewsID, distributorID) VALUES ?;`;
-
-    await dbQuery(query, [data])
-    .catch(error => {
-        throw(error);
-    })
-}
-
-async function insertProductAttributes(data){
-    const query = `INSERT INTO productAttributes (attributeName, value, datatype, productID) VALUES ?;`;
-
-    await dbQuery(query, [data])
-    .catch(error => {
-        throw(error);
-    })
-}
-
-async function fillCategories(data){
-
-    await truncateCategories()
-    .then(insertCategories(data))
-    .catch(error => {
-        throw(error);
-    })
-}
-
-async function fillDistributors(data){
-
-    await truncateDistributors()
-    .then(insertDistributors(data))
-    .catch(error => {
-        throw(error);
-    })
-}
-
-async function fillProducts(data){
-
-    await truncateProducts()
-    .then(insertProducts(data))
-    .catch(error => {
-        throw(error);
-    })
-}
-
-async function fillProductAttributes(data){
-
-    await truncateProductAttributes()
-    .then(insertProductAttributes(data))
-    .catch(error => {
-        throw(error);
-    })
-}
+const categories = new DbModel('categories', ['id', 'name', 'url', 'distributorID'], true);
+const distributors = new DbModel('distributors', ['id', 'name', 'url'], true);
+const products = new DbModel('products', ['id', 'name', 'brand', 'url', 'categoryID', 'reviewsID', 'distributorID'], true);
+const productAttributes = new DbModel('productAttributes', ['id', 'attributeName', 'value', 'datatype', 'productID'], false);
+const prices = new DbModel('prices', ['id', 'price', 'date', 'productID'], false);
+const reviews = new DbModel('reviews', ['id', 'rating', 'numReviews'], true);
 
 async function truncateAll(){
-    await truncateCategories()
-    .then(truncateDistributors())
-    .then(truncatePrices())
-    .then(truncateProducts())
-    .then(truncateProductAttributes())
-    .then(truncateReviews())
+    await categories.truncate()
+    .then(distributors.truncate())
+    .then(prices.truncate())
+    .then(products.truncate())
+    .then(productAttributes.truncate())
+    .then(reviews.truncate())
     .catch(error => {
         throw(error);
     })
 }
+
 
 module.exports = {
     truncateAll,
-    fillCategories,
-    fillDistributors,
-    fillProducts,
-    fillProductAttributes
+    categories,
+    distributors,
+    prices,
+    products,
+    productAttributes,
+    reviews
 }
