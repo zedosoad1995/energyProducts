@@ -61,38 +61,28 @@ async function getProductUrlsInDB(dist){
         });
 }
 
+// TODO: what if url is undefined??? tratar desse caso, alterar codigo para acomidar isso.
 async function getProductsInDB(products){
     const urls = products.map(product => product['url']);
+    console.log(urls);
     const query = `SELECT url
                 FROM products
                 WHERE url IN (?);`;
     const urlsInDB = await dbQuery(query, [urls])
-    .then(res => 
-        res.reduce(
-            function(obj, newRow){
-                obj.push(newRow['url']);
-                return obj;
-            }, []
-        )
-    )
+    .then(urls => urls.map(url => url['url']))
     .catch(error => {
         throw(error);
     });
 
-    const productsDict = products.reduce(
-        function(obj, product){
+    return products.reduce((obj, product) => {
             if(urlsInDB.includes(product['url']))
                 obj['productsInDB'][product['url']] = product;
             else
                 obj['productsNotInDB'][product['url']] = product;
             return obj;
-        }, {'productsInDB': {}, 'productsNotInDB': {}}
-    );
-
-    return {
-        productsInDB: productsDict['productsInDB'], 
-        productsNotInDB: productsDict['productsNotInDB']
-    };
+            }, 
+            {'productsInDB': {}, 'productsNotInDB': {}}
+        );
 }
 
 async function getUrlToProductId(){
@@ -193,5 +183,6 @@ async function updateInsertProducts(products, urlsNoAttributes){
 module.exports = {
     getProductCatalogUrls,
     updateInsertProducts,
-    getProductUrlsInDB
+    getProductUrlsInDB,
+    getProductsInDB
 }

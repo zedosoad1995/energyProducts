@@ -2,7 +2,7 @@
 
 //const app = require('../app');
 
-const {getPageProductsInfo, convertProdAttribute} = require('../services/wortenService');
+const {getPageProductsInfo, convertProdAttribute} = require('../../services/wortenService');
 
 const axios = require('axios');
 jest.mock('axios');
