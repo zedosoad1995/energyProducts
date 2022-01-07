@@ -1,16 +1,5 @@
-const db = require('../../db/config');
 const {truncateAll, categories, distributors, prices, products, productAttributes, reviews} = require('../../db/dbModels');
-const {seed} = require('../../db/seed');
 const {getProductCatalogUrls, getProductUrlsInDB, getProductsInDB} = require('../../db/queries.js');
-
-const util = require('util');
-const dbEnd = util.promisify(db.end).bind(db);
-
-
-beforeAll(async () => {
-    await truncateAll();
-    await seed();
-});
 
 describe('Function getProductCatalogUrls, to get list of all complete url paths from a specific distributor (joining tables categories and distributors)', () => {
 

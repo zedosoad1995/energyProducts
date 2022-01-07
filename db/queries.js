@@ -1,7 +1,7 @@
 const db = require('./config');
 const util = require('util');
 
-const {insertReviews, updateReviews} = require('./insertUpdateProdHelper/reviews');
+const {insertReviews, updateReviews, getInsertedIds_Reviews} = require('./insertUpdateProdHelper/reviews');
 const {insertProducts, updateProducts} = require('./insertUpdateProdHelper/products');
 const {insertPrices, updatePrices} = require('./insertUpdateProdHelper/prices');
 const {insertProductAttributes} = require('./insertUpdateProdHelper/productAttributes');
@@ -64,7 +64,7 @@ async function getProductUrlsInDB(dist){
 // TODO: what if url is undefined??? tratar desse caso, alterar codigo para acomidar isso.
 async function getProductsInDB(products){
     const urls = products.map(product => product['url']);
-    console.log(urls);
+    
     const query = `SELECT url
                 FROM products
                 WHERE url IN (?);`;
@@ -107,72 +107,39 @@ async function updateInsertProducts(products, urlsNoAttributes){
     if(products.length == 0) return;
 
     const {productsInDB, productsNotInDB} = await getProductsInDB(products);
+
+    const urlsInDBWithNewReview = Object.values(productsInDB)
+            .reduce((obj, product) => {
+                if(product['rating'] != undefined || product['num-reviews'] != undefined)
+                    obj.push(product['url']);
+                return obj;
+            }, []);
     
-    await dbBeginTransaction();
-    
-    const {idProdToUpdate, idReviewToUpdate, idReviewToInsert, urlsInDBWithNewReview} = 
-        await insertReviews(productsInDB, productsNotInDB)
-        .catch(error => {
-            db.rollback(function() {
-                throw error;
-            });
-        });
-    await updateReviews(productsInDB, urlsInDBWithNewReview)
-    .catch(error => {
-        db.rollback(function() {
-            throw error;
-        });
-    });
+    await dbBeginTransaction()
+    .then(async () => {
+        const idProdToUpdate = await insertReviews(productsInDB, productsNotInDB, urlsInDBWithNewReview);
+        await updateReviews(productsInDB, urlsInDBWithNewReview);
 
-    await insertProducts(productsNotInDB, idReviewToInsert)
-    .catch(error => {
-        db.rollback(function() {
-            throw error;
-        });
-    });
-    await updateProducts(idProdToUpdate, idReviewToUpdate)
-    .catch(error => {
-        db.rollback(function() {
-            throw error;
-        });
-    });
+        const {idReviewToUpdate, idReviewToInsert} = await getInsertedIds_Reviews(idProdToUpdate.length);
 
-    const urlToProductId = await getUrlToProductId()
-    .catch(error => {
-        db.rollback(function() {
-            throw error;
-        });
-    });
+        await insertProducts(productsNotInDB, idReviewToInsert);
+        await updateProducts(idProdToUpdate, idReviewToUpdate);
 
-    const pricesChangedSameDay = await insertPrices(productsInDB, productsNotInDB, urlToProductId)
-    .catch(error => {
-        db.rollback(function() {
-            throw error;
-        });
-    });
-    await updatePrices(pricesChangedSameDay)
-    .catch(error => {
-        db.rollback(function() {
-            throw error;
-        });
-    });
+        const urlToProductId = await getUrlToProductId()
 
-    // TODO: async then
+        const pricesChangedSameDay = await insertPrices(productsInDB, productsNotInDB, urlToProductId)
+        await updatePrices(pricesChangedSameDay)
 
-    const productsInDBWithNewAttr = Object.fromEntries(
-        Object.entries(productsInDB).filter(
-           ([prodKey,]) => urlsNoAttributes.includes(prodKey)
-        )
-     );
+        const productsInDBWithNewAttr = Object.fromEntries(
+            Object.entries(productsInDB).filter(
+               ([prodKey,]) => urlsNoAttributes.includes(prodKey)
+            )
+         );
+         await insertProductAttributes(productsNotInDB, urlToProductId, productsInDBWithNewAttr);
 
-    await insertProductAttributes(productsNotInDB, urlToProductId, productsInDBWithNewAttr)
-    .catch(error => {
-        db.rollback(function() {
-            throw error;
-        });
-    });
+         await dbCommit();
 
-    dbCommit()
+    })
     .catch(error => {
         db.rollback(function() {
             throw error;

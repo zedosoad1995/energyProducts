@@ -1,3 +1,4 @@
+const {truncateAll} = require('../db/dbModels');
 const db = require('../db/config');
 
 function waitFor(conditionFunction) {
@@ -11,6 +12,7 @@ function waitFor(conditionFunction) {
 
 beforeAll(async () => {
     await waitFor(() => db.state === 'authenticated');
+    await truncateAll();
 });
 
 afterAll(async () => {

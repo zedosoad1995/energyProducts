@@ -3,51 +3,35 @@ const util = require('util');
 
 const dbQuery = util.promisify(db.query).bind(db);
 
-async function getReviewsToInsert_ProdInDB(productsInDB){
-    if(Object.keys(productsInDB).length == 0){
+async function getReviewsToInsert_ProdInDB(productsInDB, urlsInDBWithNewReview){
+    if(Object.keys(productsInDB).length === 0){
+        console.log('d');
         return {
             reviewsToInsert_ProdInDB: [],
-            idProdToUpdate: [], 
-            urlsInDBWithNewReview: []
+            idProdToUpdate: []
         };
     }
 
-    const urlsInDBWithNewReview = Object.values(productsInDB).reduce(
-        function(obj, product){
-            if(product['rating'] != undefined || product['num-reviews'] != undefined)
-                obj.push(product['url']);
-            return obj;
-        }, []);
-
-    // Check products without a review that just got one
-    let query = `SELECT id, url 
+    // Check products without a review that just got the first review
+    const query = `SELECT id, url 
                 FROM products 
                 WHERE url IN (?) AND reviewsID IS NULL;`;
-    const {idProdToUpdate, urlInDBToInsert} = await dbQuery(query, [urlsInDBWithNewReview])
-    .then(res => {
-        return res.reduce(
-            function(obj, row){
-                obj['idProdToUpdate'].push(row['id']);
-                obj['urlInDBToInsert'].push(row['url']);
-                return obj;
-            }, {'idProdToUpdate': [], 'urlInDBToInsert': []}
-        );
-    })
-    .catch(error => {
-        throw(error);
-    });
 
-    return {
-        reviewsToInsert_ProdInDB: urlInDBToInsert.map(url => [productsInDB[url]['rating'], productsInDB[url]['num-reviews']]),
-        idProdToUpdate: idProdToUpdate, 
-        urlsInDBWithNewReview: urlsInDBWithNewReview
-    };
-
+    return await dbQuery(query, [urlsInDBWithNewReview])
+        .then(res => {
+            return res.reduce((obj, row) => {
+                    obj['idProdToUpdate'].push(row['id']);
+                    obj['reviewsToInsert_ProdInDB'].push([productsInDB[row['url']]['rating'], productsInDB[row['url']]['num-reviews']]);
+                    return obj;
+                }, {'idProdToUpdate': [], 'reviewsToInsert_ProdInDB': []});
+        })
+        .catch(error => {
+            throw(error);
+        });
 }
 
 function getReviewsToInsert_ProdNotInDB(productsNotInDB){
-    return Object.values(productsNotInDB).reduce(
-            function(obj, product){
+    return Object.values(productsNotInDB).reduce((obj, product) => {
                 if(product['rating'] != undefined || product['num-reviews'] != undefined){
                     obj['reviewsToInsert_ProdNotInDB'].push([product['rating'], product['num-reviews']]);
                     obj['hasReview'].push(true);
@@ -55,15 +39,38 @@ function getReviewsToInsert_ProdNotInDB(productsNotInDB){
                     obj['hasReview'].push(false);
                 }
                 return obj;
-            }, 
-            {'reviewsToInsert_ProdNotInDB': [], 'hasReview': []});
+            }, {'reviewsToInsert_ProdNotInDB': [], 'hasReview': []});
 }
 
-function getIdReviewToInsert(ids, len, hasReview){
-    const idReviewToInsert = ids.slice(len);
+async function insertReviews(productsInDB, productsNotInDB, urlsInDBWithNewReview){
 
+    const {reviewsToInsert_ProdInDB, idProdToUpdate} = 
+        await getReviewsToInsert_ProdInDB(productsInDB, urlsInDBWithNewReview);
+
+    const {reviewsToInsert_ProdNotInDB, hasReview} = 
+        getReviewsToInsert_ProdNotInDB(productsNotInDB);
+
+    const reviewsToInsert = [...reviewsToInsert_ProdInDB, ...reviewsToInsert_ProdNotInDB];
+
+    if(reviewsToInsert.length > 0){
+        // Insert
+        let query = `INSERT INTO reviews (rating, numReviews) VALUES ?;`;
+        await dbQuery(query, [reviewsToInsert])
+        .catch(error => {
+            throw(error);
+        });
+    }
+
+    return {
+        idProdToUpdate,
+        hasReview
+    };
+}
+
+function getIdReviewToInsert(idReviewToInsert, hasReview){
     let idReviewToInsertWithNull = [];
     let j = 0;
+
     for(let i = 0; i < hasReview.length; i++){
         if(hasReview[i]){
             idReviewToInsertWithNull.push(idReviewToInsert[j]);
@@ -76,49 +83,25 @@ function getIdReviewToInsert(ids, len, hasReview){
     return idReviewToInsertWithNull;
 }
 
-async function insertReviews(productsInDB, productsNotInDB){
-
-    const {reviewsToInsert_ProdInDB, idProdToUpdate, urlsInDBWithNewReview} = 
-        await getReviewsToInsert_ProdInDB(productsInDB);
-
-    const {reviewsToInsert_ProdNotInDB, hasReview} = 
-        getReviewsToInsert_ProdNotInDB(productsNotInDB);
-
-    const reviewsToInsert = [...reviewsToInsert_ProdInDB, ...reviewsToInsert_ProdNotInDB];
-
-    if(reviewsToInsert.length == 0) 
-        return {
-            idProdToUpdate: [], 
-            idReviewToUpdate: [], 
-            idReviewToInsert: [], 
-            urlsInDBWithNewReview: urlsInDBWithNewReview
-        };
-    
-    // Insert
-    let query = `INSERT INTO reviews (rating, numReviews) VALUES ?;`;
-    await dbQuery(query, [reviewsToInsert])
-    .catch(error => {
-        throw(error);
-    });
-
+async function getInsertedIds_Reviews(lenIdsToUpdate){
     // Get Id of Inserted Values
-    query = `SELECT id
-            FROM reviews
-            WHERE id >= LAST_INSERT_ID();`;
+    const query = `
+        SELECT id
+        FROM reviews
+        WHERE id >= LAST_INSERT_ID();`;
+
     const ids = await dbQuery(query)
     .then(res => res.map(row => row['id']))
     .catch(error => {
         throw(error);
     });
 
-    const idReviewToUpdate = ids.slice(0, reviewsToInsert_ProdInDB.length);
-    const idReviewToInsert = getIdReviewToInsert(ids, reviewsToInsert_ProdInDB.length, hasReview);
+    const idReviewToUpdate = ids.slice(0, lenIdsToUpdate);
+    const idReviewToInsert = getIdReviewToInsert(ids.slice(lenIdsToUpdate), hasReview);
 
     return {
-        idProdToUpdate: idProdToUpdate, 
         idReviewToUpdate: idReviewToUpdate, 
         idReviewToInsert: idReviewToInsert, 
-        urlsInDBWithNewReview: urlsInDBWithNewReview
     };
 }
 
@@ -155,5 +138,8 @@ async function updateReviews(productsInDB, urlsToUpdate){
 
 module.exports = {
     insertReviews,
-    updateReviews
+    updateReviews,
+    getInsertedIds_Reviews,
+    getReviewsToInsert_ProdInDB,
+    getReviewsToInsert_ProdNotInDB
 }
