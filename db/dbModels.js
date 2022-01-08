@@ -42,6 +42,22 @@ DbModel.prototype.fill = async function(data){
     })
 }
 
+DbModel.prototype.get = async function(){
+    const query = `
+        SELECT * 
+        FROM ${this.tableName};`;
+
+    return await dbQuery(query)
+        .then(rows => {
+            return rows.map(row => {
+                return this.columnNames.map(colName => row[colName]);
+            })
+        })
+        .catch(error => {
+            throw(error);
+        });
+}
+
 const categories = new DbModel('categories', ['id', 'name', 'url', 'distributorID'], true);
 const distributors = new DbModel('distributors', ['id', 'name', 'url'], true);
 const products = new DbModel('products', ['id', 'name', 'brand', 'url', 'categoryID', 'reviewsID', 'distributorID'], true);

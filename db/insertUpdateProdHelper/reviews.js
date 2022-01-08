@@ -5,7 +5,6 @@ const dbQuery = util.promisify(db.query).bind(db);
 
 async function getReviewsToInsert_ProdInDB(productsInDB, urlsInDBWithNewReview){
     if(Object.keys(productsInDB).length === 0){
-        console.log('d');
         return {
             reviewsToInsert_ProdInDB: [],
             idProdToUpdate: []
