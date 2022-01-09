@@ -201,7 +201,7 @@ describe('updateReviews', () => {
 describe('Function getInsertedIds_Reviews', () => {
 
     it('replaces indexes of idReviewToInsert, where hasReview is false, with null', () => {
-        const idReviewToInsertData = [1, 2, 4, 5];
+        const idReviewToInsertData = [1, 2, 4];
         const hasReviewData = [true, true, false, true, false];
 
         const expectedOutput = [1, 2, null, 4, null]
@@ -209,7 +209,23 @@ describe('Function getInsertedIds_Reviews', () => {
         const output = getIdReviewToInsert(idReviewToInsertData, hasReviewData)
         
         expect(output).toStrictEqual(expectedOutput);
-    })
+    });
+
+    it('Too many \'true\', for number of ids in \'idReviewToInsertData\'', () => {
+        const idReviewToInsertData = [1, 2, 4];
+        const hasReviewData = [true, true, false, true, true];
+        
+        expect(() => getIdReviewToInsert(idReviewToInsertData, hasReviewData))
+        .toThrow('Not enough ids in \'idReviewToInsert\', for number of \'true\' in \'hasReview\'');
+    });
+
+    it('Too many ids in \'idReviewToInsertData\', for number of \'true\' in \'hasReview\'', () => {
+        const idReviewToInsertData = [1, 2, 4, 5, 6];
+        const hasReviewData = [true, true, false, true, true];
+        
+        expect(() => getIdReviewToInsert(idReviewToInsertData, hasReviewData))
+        .toThrow('Too many ids in \'idReviewToInsertData\', for number of \'true\' in \'hasReview\'');
+    });
 
     /*
         prods in DB with review
@@ -227,7 +243,7 @@ describe('Function getInsertedIds_Reviews', () => {
         2 with scraped review (one with 1 undefined value)
         1 with undefined scraped review
     */
-    it('Inserts new reviews in DB', async () => {
+    it('Get inserted Ids in Review', async () => {
         const productsInDBData = {
             url1: {url: 'url1', 'num-reviews': 14, rating: 4.3}, 
             url2: {url: 'url2', 'num-reviews': 104, rating: undefined}, 
