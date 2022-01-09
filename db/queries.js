@@ -64,7 +64,7 @@ async function getProductUrlsInDB(dist){
 // TODO: what if url is undefined??? tratar desse caso, alterar codigo para acomidar isso.
 async function getProductsInDB(products){
     const urls = products.map(product => product['url']);
-    
+
     const query = `SELECT url
                 FROM products
                 WHERE url IN (?);`;
@@ -117,10 +117,10 @@ async function updateInsertProducts(products, urlsNoAttributes){
     
     await dbBeginTransaction()
     .then(async () => {
-        const idProdToUpdate = await insertReviews(productsInDB, productsNotInDB, urlsInDBWithNewReview);
+        const {idProdToUpdate, hasReview} = await insertReviews(productsInDB, productsNotInDB, urlsInDBWithNewReview);
         await updateReviews(productsInDB, urlsInDBWithNewReview);
 
-        const {idReviewToUpdate, idReviewToInsert} = await getInsertedIds_Reviews(idProdToUpdate.length);
+        const {idReviewToUpdate, idReviewToInsert} = await getInsertedIds_Reviews(idProdToUpdate.length, hasReview);
 
         await insertProducts(productsNotInDB, idReviewToInsert);
         await updateProducts(idProdToUpdate, idReviewToUpdate);

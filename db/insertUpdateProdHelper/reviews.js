@@ -82,7 +82,7 @@ function getIdReviewToInsert(idReviewToInsert, hasReview){
     return idReviewToInsertWithNull;
 }
 
-async function getInsertedIds_Reviews(lenIdsToUpdate){
+async function getInsertedIds_Reviews(lenIdsToUpdate, hasReview){
     // Get Id of Inserted Values
     const query = `
         SELECT id
@@ -126,8 +126,18 @@ async function updateReviews(productsInDB, urlsToUpdate){
     query = `INSERT INTO reviews 
             (id, rating, numReviews)
             VALUES ? ON DUPLICATE KEY UPDATE
-            rating = VALUES(rating), 
-            numReviews = VALUES(numReviews);`;
+            rating = 
+                    CASE 
+                        WHEN VALUES(rating) IS NULL
+                            THEN rating 
+                        ELSE VALUES(rating) 
+                    END, 
+            numReviews = 
+                        CASE 
+                            WHEN VALUES(numReviews) IS NULL
+                                THEN numReviews 
+                            ELSE VALUES(numReviews) 
+                        END;`;
 
     await dbQuery(query, [reviewsToUpdate])
     .catch(error => {
@@ -140,5 +150,6 @@ module.exports = {
     updateReviews,
     getInsertedIds_Reviews,
     getReviewsToInsert_ProdInDB,
-    getReviewsToInsert_ProdNotInDB
+    getReviewsToInsert_ProdNotInDB,
+    getIdReviewToInsert,
 }
