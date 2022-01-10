@@ -1,7 +1,8 @@
 const db = require('./config');
 const util = require('util');
 
-const {insertReviews, updateReviews, getInsertedIds_Reviews} = require('./insertUpdateProdHelper/reviews');
+const {updateInsertReviews, getInsertedIds_Reviews, getReviewsToUpdate,
+    getReviewsToInsert_ProdInDB, getReviewsToInsert_ProdNotInDB} = require('./insertUpdateProdHelper/reviews');
 const {insertProducts, updateProducts} = require('./insertUpdateProdHelper/products');
 const {insertPrices, updatePrices} = require('./insertUpdateProdHelper/prices');
 const {insertProductAttributes} = require('./insertUpdateProdHelper/productAttributes');
@@ -114,11 +115,18 @@ async function updateInsertProducts(products, urlsNoAttributes){
                     obj.push(product['url']);
                 return obj;
             }, []);
+
+    const {reviewsToInsert_ProdInDB, idProdToUpdate} = await getReviewsToInsert_ProdInDB(productsInDB, urlsInDBWithNewReview);
+    const {reviewsToInsert_ProdNotInDB, hasReview} = getReviewsToInsert_ProdNotInDB(productsNotInDB);
+    const reviewsToInsert = [...reviewsToInsert_ProdInDB, ...reviewsToInsert_ProdNotInDB];
+
+    const reviewsToUpdate = getReviewsToUpdate(productsInDB, urlsInDBWithNewReview);
+
+    const reviewsToUpdateInsert = [...reviewsToInsert, ...reviewsToUpdate];
     
     await dbBeginTransaction()
     .then(async () => {
-        const {idProdToUpdate, hasReview} = await insertReviews(productsInDB, productsNotInDB, urlsInDBWithNewReview);
-        await updateReviews(productsInDB, urlsInDBWithNewReview);
+        await updateInsertReviews(reviewsToUpdateInsert);
 
         const {idReviewToUpdate, idReviewToInsert} = await getInsertedIds_Reviews(idProdToUpdate.length, hasReview);
 
