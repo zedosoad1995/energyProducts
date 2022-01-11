@@ -1,6 +1,6 @@
-const {categories, distributors, prices, products, productAttributes, reviews} = require('../../db/dbModels');
+const {distributors, products, reviews} = require('../../db/dbModels');
 const {updateInsertReviews, getReviewsToInsert_ProdInDB, getReviewsToInsert_ProdNotInDB,
-    getInsertedIds_Reviews, getIdReviewToInsert, getReviewsToUpdate} = require('../../db/insertUpdateProdHelper/reviews.js');
+    getInsertedIds_Reviews, getIdReviewToInsert, getReviewsToUpdate, fillReviews} = require('../../db/insertUpdateProdHelper/reviews.js');
 
 describe('Function getReviewsToInsert_ProdInDB', () => {
 
@@ -36,7 +36,7 @@ describe('Function getReviewsToInsert_ProdInDB', () => {
                 return obj;
             }, []);
 
-        expect(getReviewsToInsert_ProdInDB(productsScrapedData, urlsInDBWithNewReview)).resolves.toStrictEqual(expectedVals);
+        await expect(getReviewsToInsert_ProdInDB(productsScrapedData, urlsInDBWithNewReview)).resolves.toStrictEqual(expectedVals);
     });
 
     it('Returns an empty dictionary, when there is no scraped products in DB', async () => {
@@ -54,7 +54,7 @@ describe('Function getReviewsToInsert_ProdInDB', () => {
                 return obj;
             }, []);
 
-        expect(getReviewsToInsert_ProdInDB(productsScrapedData, urlsInDBWithNewReview)).resolves.toStrictEqual(expectedVals);
+        await expect(getReviewsToInsert_ProdInDB(productsScrapedData, urlsInDBWithNewReview)).resolves.toStrictEqual(expectedVals);
     });
 });
 
@@ -212,5 +212,41 @@ describe('Function updateInsertReviews', () => {
 
         await updateInsertReviews(reviewsToUpdateInsert);        
         await expect(getInsertedIds_Reviews(lenIdsToUpdate, hasReview)).resolves.toStrictEqual(expectedRes);
+    });
+});
+
+describe('Function fillReviews', () => {
+
+    it('Updates and inserts table reviews with the scraped products', async () => {
+        const productsInDB = {
+            url1: {url: 'url1', rating: 2, 'num-reviews': 12},
+            url2: {url: 'url2', rating: 3, 'num-reviews': 33},
+            url3: {url: 'url3', rating: 4.3, 'num-reviews': undefined},
+            url4: {url: 'url4', rating: undefined, 'num-reviews': undefined},
+        };
+
+        const productsNotInDB = {
+            url5: {url: 'url5', rating: 5, 'num-reviews': 55},
+            url6: {url: 'url6', rating: undefined, 'num-reviews': 111},
+            url7: {url: 'url7', rating: undefined, 'num-reviews': undefined},
+        };
+
+        const distributorsData = [[1, 'dist1', 'base1']];
+        const reviewsData = [[1, 2.2, 13], [2, 4.2, 103], [3, 1.1, 11], [4, 4.4, 44]];
+        const productsData = [[1, 'prod1', 'brand1', 'url1', null, 1, 1], [2, 'prod2', 'brand1', 'url2', null, null, 1],
+                            [3, 'prod3', 'brand1', 'url3', null, 2, 1], [4, 'prod4', 'brand1', 'url4', null, 3, 1],
+                            [5, 'prod5', 'brand1', 'url5', null, 4, 1]];
+
+        const expectedVals = {
+            idProdToUpdate: [2],
+            idReviewToUpdate: [5],
+            idReviewToInsert: [6, 7, null]
+        };
+
+        await distributors.fill(distributorsData);
+        await reviews.fill(reviewsData);
+        await products.fill(productsData);
+
+        await expect(fillReviews(productsInDB, productsNotInDB)).resolves.toStrictEqual(expectedVals);
     });
 });

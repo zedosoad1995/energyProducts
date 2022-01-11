@@ -150,11 +150,39 @@ async function updateInsertReviews(reviews){
     });
 }
 
+async function fillReviews(productsInDB, productsNotInDB){
+    const urlsInDBWithNewReview = Object.values(productsInDB)
+            .reduce((obj, product) => {
+                if(product['rating'] != undefined || product['num-reviews'] != undefined)
+                    obj.push(product['url']);
+                return obj;
+            }, []);
+
+    const {reviewsToInsert_ProdInDB, idProdToUpdate} = await getReviewsToInsert_ProdInDB(productsInDB, urlsInDBWithNewReview);
+    const {reviewsToInsert_ProdNotInDB, hasReview} = getReviewsToInsert_ProdNotInDB(productsNotInDB);
+    const reviewsToInsert = [...reviewsToInsert_ProdInDB, ...reviewsToInsert_ProdNotInDB];
+
+    const reviewsToUpdate = await getReviewsToUpdate(productsInDB, urlsInDBWithNewReview);
+
+    const reviewsToUpsert= [...reviewsToInsert, ...reviewsToUpdate];
+
+    await updateInsertReviews(reviewsToUpsert);
+
+    const {idReviewToUpdate, idReviewToInsert} = await getInsertedIds_Reviews(idProdToUpdate.length, hasReview);
+
+    return {
+        idProdToUpdate,
+        idReviewToUpdate,
+        idReviewToInsert
+    }
+}
+
 module.exports = {
     updateInsertReviews,
     getInsertedIds_Reviews,
     getReviewsToInsert_ProdInDB,
     getReviewsToInsert_ProdNotInDB,
     getIdReviewToInsert,
-    getReviewsToUpdate
+    getReviewsToUpdate,
+    fillReviews
 }

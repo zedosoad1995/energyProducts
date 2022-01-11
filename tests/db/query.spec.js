@@ -1,4 +1,4 @@
-const {truncateAll, categories, distributors, prices, products, productAttributes, reviews} = require('../../db/dbModels');
+const {truncateAll, categories, distributors, products, productAttributes} = require('../../db/dbModels');
 const {getProductCatalogUrls, getProductUrlsInDB, getProductsInDB} = require('../../db/queries.js');
 
 describe('Function getProductCatalogUrls, to get list of all complete url paths from a specific distributor (joining tables categories and distributors)', () => {

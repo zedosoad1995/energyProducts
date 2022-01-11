@@ -1,9 +1,8 @@
 const db = require('./config');
 const util = require('util');
 
-const {updateInsertReviews, getInsertedIds_Reviews, getReviewsToUpdate,
-    getReviewsToInsert_ProdInDB, getReviewsToInsert_ProdNotInDB} = require('./insertUpdateProdHelper/reviews');
-const {insertProducts, updateProducts} = require('./insertUpdateProdHelper/products');
+const {fillReviews} = require('./insertUpdateProdHelper/reviews');
+const {updateInsertProducts, getProductsToInsert, getProductsToUpdate} = require('./insertUpdateProdHelper/products');
 const {insertPrices, updatePrices} = require('./insertUpdateProdHelper/prices');
 const {insertProductAttributes} = require('./insertUpdateProdHelper/productAttributes');
 
@@ -90,7 +89,7 @@ async function getUrlToProductId(){
     const query = `SELECT id, url
                     FROM products;`;
 
-    return await dbQuery(query)
+    return dbQuery(query)
         .then(res => {
             return res.reduce(
                 function(urlToProductId, product){
@@ -104,34 +103,21 @@ async function getUrlToProductId(){
         });
 }
 
-async function updateInsertProducts(products, urlsNoAttributes){
+async function updateInsertScrapedProducts(products, urlsNoAttributes){
     if(products.length == 0) return;
 
     const {productsInDB, productsNotInDB} = await getProductsInDB(products);
-
-    const urlsInDBWithNewReview = Object.values(productsInDB)
-            .reduce((obj, product) => {
-                if(product['rating'] != undefined || product['num-reviews'] != undefined)
-                    obj.push(product['url']);
-                return obj;
-            }, []);
-
-    const {reviewsToInsert_ProdInDB, idProdToUpdate} = await getReviewsToInsert_ProdInDB(productsInDB, urlsInDBWithNewReview);
-    const {reviewsToInsert_ProdNotInDB, hasReview} = getReviewsToInsert_ProdNotInDB(productsNotInDB);
-    const reviewsToInsert = [...reviewsToInsert_ProdInDB, ...reviewsToInsert_ProdNotInDB];
-
-    const reviewsToUpdate = getReviewsToUpdate(productsInDB, urlsInDBWithNewReview);
-
-    const reviewsToUpdateInsert = [...reviewsToInsert, ...reviewsToUpdate];
     
     await dbBeginTransaction()
     .then(async () => {
-        await updateInsertReviews(reviewsToUpdateInsert);
 
-        const {idReviewToUpdate, idReviewToInsert} = await getInsertedIds_Reviews(idProdToUpdate.length, hasReview);
+        const {idReviewToUpdate, idReviewToInsert, idProdToUpdate} = fillReviews(productsInDB, productsNotInDB);
 
-        await insertProducts(productsNotInDB, idReviewToInsert);
-        await updateProducts(idProdToUpdate, idReviewToUpdate);
+        const productsToInsert = await getProductsToInsert(productsNotInDB, idReviewToInsert);
+        const productsToUpdate = getProductsToUpdate(idProdToUpdate, idReviewToUpdate);
+        const productsToUpsert = [...productsToInsert, ...productsToUpdate];
+
+        await updateInsertProducts(productsToUpsert);
 
         const urlToProductId = await getUrlToProductId()
 
@@ -157,7 +143,7 @@ async function updateInsertProducts(products, urlsNoAttributes){
 
 module.exports = {
     getProductCatalogUrls,
-    updateInsertProducts,
+    updateInsertScrapedProducts,
     getProductUrlsInDB,
     getProductsInDB
 }
