@@ -1,5 +1,5 @@
 const {categories, distributors, prices, products, productAttributes, reviews} = require('../../db/dbModels');
-const {getDistributorIds, getCategoryIds, getProductsToInsert} = require('../../db/insertUpdateProdHelper/products.js');
+const {getDistributorIds, getCategoryIds, getProductsToInsert, getProductsToUpdate, updateInsertProducts} = require('../../db/insertUpdateProdHelper/products.js');
 
 describe('Function getDistributorIds', () => {
 
@@ -105,5 +105,54 @@ describe('Function getProductsToInsert', () => {
 
         await expect(getProductsToInsert(productsNotInDB, idReviewsToInsert))
         .rejects.toThrow(`'productsNotInDB' and 'idReviewsToInsert' have different length`);
+    });
+});
+
+describe('Function getProductsToUpdate', () => {
+
+    it('Get Products to update (only updates reviewID)', async () => {
+        const idProdToUpdate = [1, 2, 3];
+        const idReviewToUpdate = [2, 6, 7];
+
+        const expectedVal = [[1, null, null, null, null, null, 2],
+                            [2, null, null, null, null, null, 6],
+                            [3, null, null, null, null, null, 7]];
+
+        expect(getProductsToUpdate(idProdToUpdate, idReviewToUpdate)).toStrictEqual(expectedVal);
+    });
+
+    it(`Throws error when 'productsNotInDB' and 'idReviewsToInsert' have different length`, async () => {
+        const idProdToUpdate = [1, null, 3];
+        const idReviewToUpdate = [2, 6, 7];
+
+        expect(() => getProductsToUpdate(idProdToUpdate, idReviewToUpdate)).toThrow(`Input array contains invalid elements. All must be Numbers.`);
+    });
+});
+
+describe('Function updateInsertProducts', () => {
+
+    it('Obtains a list of Ids of the Distributors in the scraped products that do not yet exist in the DB', async () => {
+        
+        const distributorsData = [[1, 'dist1', 'base1']];
+        const categoriesData = [[1, 'Esquentador', 'url1', 1]];
+        const reviewsData = [[1, 2.2, 13], [2, 4.2, 103], [3, 4.3, 103]];
+        const productsData= [[1, 'prod1', 'brand1', 'url1', 1, 3, 1], [2, 'prod2', 'brand1', 'url2', 1, null, 1]];
+
+        const productsToUpsert = [[null, 'prod_a', 'brand_a', 'url_a', 1, 1, 1], [null, 'prod_b', 'brand1', 'url_b', 1, 1, null],
+                                [2, null, null, null, null, null, 2]];
+
+        const expectedProds = [[1, 'prod1', 'brand1', 'url1', 1, 3, 1], [2, 'prod2', 'brand1', 'url2', 1, 2, 1],
+                                [3, 'prod_a', 'brand_a', 'url_a', 1, 1, 1], [4, 'prod_b', 'brand1', 'url_b', 1, null, 1]];
+
+        await distributors.fill(distributorsData);
+        await categories.fill(categoriesData);
+        await reviews.fill(reviewsData);
+        await products.fill(productsData);
+
+        await updateInsertProducts(productsToUpsert)
+        .then(async () => {
+            const prodsOutput = await products.get()
+            expect(prodsOutput).toStrictEqual(expectedProds);
+        })
     });
 });

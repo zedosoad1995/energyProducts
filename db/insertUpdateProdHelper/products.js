@@ -65,7 +65,6 @@ async function getProductsToInsert(productsNotInDB, idReviewsToInsert){
     if(Object.keys(productsNotInDB).length === 0) return;
 
     if(Object.keys(productsNotInDB).length !== idReviewsToInsert.length){
-        console.log('asasf');
         throw new Error(`'productsNotInDB' and 'idReviewsToInsert' have different length`);
     }
 
@@ -77,9 +76,12 @@ async function getProductsToInsert(productsNotInDB, idReviewsToInsert){
         });
 }
 
-async function getProductsToUpdate(idProdToUpdate, idReviewToUpdate){
+function getProductsToUpdate(idProdToUpdate, idReviewToUpdate){
     if(idProdToUpdate.length === 0 || idReviewToUpdate.length === 0) return;
 
+    if(idProdToUpdate.some(isNaN) || idReviewToUpdate.some(isNaN) || idProdToUpdate.includes(null) || idReviewToUpdate.includes(null))
+        throw new Error(`Input array contains invalid elements. All must be Numbers.`);
+    
     if(idProdToUpdate.length !== idReviewToUpdate.length)
         throw new Error(`'idProdToUpdate' and 'idReviewToUpdate' have different lengths.`);
 
