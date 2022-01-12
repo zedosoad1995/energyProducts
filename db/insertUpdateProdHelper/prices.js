@@ -12,10 +12,11 @@ async function getChangedPrices(productsInDB, urlToProductId, prodIdToUrl_InDB, 
 
     const todayStr = dateToString(today);
 
-    const {prodIdANDPrice, prodId} = Object.values(productsInDB).reduce(
-        function(obj, product){
-            obj['prodIdANDPrice'].push(urlToProductId[product['url']].toString() + product['price'].toString());
-            obj['prodId'].push(urlToProductId[product['url']]);
+    const {prodIdANDPrice, prodId} = Object.values(productsInDB).reduce((obj, product) => {
+            if(product['price'] && urlToProductId[product['url']]){
+                obj['prodIdANDPrice'].push(urlToProductId[product['url']].toString() + product['price'].toString());
+                obj['prodId'].push(urlToProductId[product['url']]);
+            }
             return obj;
         }, 
         {prodIdANDPrice: [], prodId: []});
@@ -39,14 +40,13 @@ async function getChangedPrices(productsInDB, urlToProductId, prodIdToUrl_InDB, 
     
     return await dbQuery(query, [prodIdANDPrice, prodId])
         .then(prices => {
-            return prices.reduce(
-                function(obj, price){
+            return prices.reduce((obj, price) => {
                     const url = prodIdToUrl_InDB[price['productID']];
 
                     if(dateToString(price['date']) == todayStr)
-                        obj['pricesChangedSameDay'].push([price['id'], productsInDB[url]['price']]);
+                        obj['pricesChangedSameDay'].push([price['id'], productsInDB[url]['price'], today, null]);
                     else                
-                        obj['pricesChangedNotSameDay'].push([productsInDB[url]['price'], today, price['productID']]);
+                        obj['pricesChangedNotSameDay'].push([null, productsInDB[url]['price'], today, price['productID']]);
 
                     return obj;
 
@@ -59,24 +59,24 @@ async function getChangedPrices(productsInDB, urlToProductId, prodIdToUrl_InDB, 
 
 async function getFirstPrices_ProdInDB(productsInDB, prodIdToUrl_InDB, today){
 
-    query = `SELECT DISTINCT productID FROM prices;`;
+    const query = `SELECT DISTINCT productID FROM prices;`;
 
     return await dbQuery(query)
         .then(prices => {
             return prices.map(price => price['productID']);
         })
-        .then(ids => {
+        .then(productIdsInPricesDB => {
             let idsToInsert = Object.keys(prodIdToUrl_InDB);
 
-            for(let i = 0; i < ids.length; i++){
-                const index = idsToInsert.indexOf(ids[i].toString());
+            for(let i = 0; i < productIdsInPricesDB.length; i++){
+                const index = idsToInsert.indexOf(productIdsInPricesDB[i].toString());
                 if (index > -1)
                     idsToInsert.splice(index, 1);
             }
 
             return idsToInsert.map(id => {
                 const url = prodIdToUrl_InDB[id];
-                return [productsInDB[url]['price'], today, id]
+                return [null, productsInDB[url]['price'], today, Number(id)];
             });        
         })
         .catch(error => {
@@ -84,13 +84,12 @@ async function getFirstPrices_ProdInDB(productsInDB, prodIdToUrl_InDB, today){
         });
 }
 
-async function insertPrices(productsInDB, productsNotInDB, urlToProductId){
+async function getPricesToUpsert(productsInDB, productsNotInDB, urlToProductId){
     const today = new Date();
 
-    const pricesToInsert_ProdNotInDB = Object.values(productsNotInDB).map(product => [product['price'], today, urlToProductId[product['url']]]);
+    const pricesToInsert_ProdNotInDB = Object.values(productsNotInDB).map(product => [null, product['price'], today, urlToProductId[product['url']]]);
 
-    const prodIdToUrl_InDB = Object.keys(productsInDB).reduce(
-        function(prodIdToUrl, url){
+    const prodIdToUrl_InDB = Object.keys(productsInDB).reduce((prodIdToUrl, url) =>{
             prodIdToUrl[urlToProductId[url]] = url;
             return prodIdToUrl;
         }, {}
@@ -99,35 +98,32 @@ async function insertPrices(productsInDB, productsNotInDB, urlToProductId){
     const {pricesChangedNotSameDay, pricesChangedSameDay} = await getChangedPrices(productsInDB, urlToProductId, prodIdToUrl_InDB, today);
     const newPricesToInsert_ProdInDB = await getFirstPrices_ProdInDB(productsInDB, prodIdToUrl_InDB, today);
 
-    const pricesToInsert = [...pricesChangedNotSameDay, ...newPricesToInsert_ProdInDB, ...pricesToInsert_ProdNotInDB];
-
-    // Insert
-    if(pricesToInsert.length > 0){
-        query = `INSERT INTO prices (price, date, productID) VALUES ?;`;
-        await dbQuery(query, [pricesToInsert])
-        .catch(error => {
-            throw(error);
-        });
-    }
-
-    return pricesChangedSameDay;
+    return [...pricesChangedNotSameDay, ...newPricesToInsert_ProdInDB, ...pricesToInsert_ProdNotInDB, ...pricesChangedSameDay];
 }
 
-async function updatePrices(pricesToUpdate){
-    if(pricesToUpdate.length == 0) return;
+async function upsertPrices(pricesToUpsert){
+    if(pricesToUpsert.length == 0) return;
 
-    query = `INSERT INTO prices 
-            (id, price)
+    const query = `INSERT INTO prices 
+            (id, price, date, productID)
             VALUES ? ON DUPLICATE KEY UPDATE
             price = VALUES(price);`;
     
-    await dbQuery(query, [pricesToUpdate])
+    await dbQuery(query, [pricesToUpsert])
     .catch(error => {
         throw(error);
     });
 }
 
+async function fillPrices(productsInDB, productsNotInDB, urlToProductId){
+    await getPricesToUpsert(productsInDB, productsNotInDB, urlToProductId);
+    await upsertPrices(pricesToUpsert);
+}
+
 module.exports = {
-    insertPrices,
-    updatePrices
+    fillPrices,
+    getChangedPrices,
+    getFirstPrices_ProdInDB,
+    getPricesToUpsert,
+    upsertPrices
 }

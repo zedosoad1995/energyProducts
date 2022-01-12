@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS products(
 CREATE TABLE IF NOT EXISTS prices(
     id INT AUTO_INCREMENT PRIMARY KEY,
     price DECIMAL(9, 2),
-    date DATE NOT NULL,
+    date DATETIME NOT NULL,
     productID INT NOT NULL,
     FOREIGN KEY (productID)
         REFERENCES products (id)

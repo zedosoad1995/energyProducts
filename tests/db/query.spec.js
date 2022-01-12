@@ -1,5 +1,5 @@
 const {truncateAll, categories, distributors, products, productAttributes} = require('../../db/dbModels');
-const {getProductCatalogUrls, getProductUrlsInDB, getProductsInDB} = require('../../db/queries.js');
+const {getProductCatalogUrls, getProductUrlsInDB, getProductsInDB, getUrlToProductId} = require('../../db/queries.js');
 
 describe('Function getProductCatalogUrls, to get list of all complete url paths from a specific distributor (joining tables categories and distributors)', () => {
 
@@ -80,4 +80,19 @@ describe('Function getProductsInDB', () => {
             expect(productsNotInDB).toStrictEqual({url3: {url: 'url3'}, url4: {url: 'url4'}});
         })
     });
+});
+
+describe('Function getUrlToProductId', () => {
+
+    it(`Returns dictionary with url as key, and id as the values, related to the products in the 'products' Table`, async () => {
+        const distributorsTable = [[1, 'dist1', 'base1']];
+        const productsTable = [[1, 'prod1', 'brand1', 'url1', null, null, 1], [2, 'prod2', 'brand1', 'url2', null, null, 1]];
+
+        const expectedOutput = {url1: 1, url2: 2};
+
+        await distributors.fill(distributorsTable);
+        await products.fill(productsTable);
+
+        expect(getUrlToProductId()).resolves.toStrictEqual(expectedOutput);
+    })
 });

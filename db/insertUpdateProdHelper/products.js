@@ -131,10 +131,19 @@ async function updateInsertProducts(products){
     });
 }
 
+async function fillProducts(productsNotInDB, idReviewToInsert, idProdToUpdate, idReviewToUpdate){
+    const productsToInsert = await getProductsToInsert(productsNotInDB, idReviewToInsert);
+    const productsToUpdate = getProductsToUpdate(idProdToUpdate, idReviewToUpdate);
+    const productsToUpsert = [...productsToInsert, ...productsToUpdate];
+
+    await updateInsertProducts(productsToUpsert);
+}
+
 module.exports = {
     getDistributorIds,
     getCategoryIds,
     updateInsertProducts,
     getProductsToInsert,
-    getProductsToUpdate
+    getProductsToUpdate,
+    fillProducts
 }

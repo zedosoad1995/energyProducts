@@ -2,8 +2,8 @@ const db = require('./config');
 const util = require('util');
 
 const {fillReviews} = require('./insertUpdateProdHelper/reviews');
-const {updateInsertProducts, getProductsToInsert, getProductsToUpdate} = require('./insertUpdateProdHelper/products');
-const {insertPrices, updatePrices} = require('./insertUpdateProdHelper/prices');
+const {fillProducts} = require('./insertUpdateProdHelper/products');
+const {fillPrices} = require('./insertUpdateProdHelper/prices');
 const {insertProductAttributes} = require('./insertUpdateProdHelper/productAttributes');
 
 const dbQuery = util.promisify(db.query).bind(db);
@@ -85,14 +85,14 @@ async function getProductsInDB(products){
         );
 }
 
+// TODO: urls cannot be null? What about other websites?
 async function getUrlToProductId(){
     const query = `SELECT id, url
                     FROM products;`;
 
     return dbQuery(query)
         .then(res => {
-            return res.reduce(
-                function(urlToProductId, product){
+            return res.reduce((urlToProductId, product) => {
                     urlToProductId[product['url']] = product['id'];
                     return urlToProductId;
                 }, {}
@@ -112,17 +112,11 @@ async function updateInsertScrapedProducts(products, urlsNoAttributes){
     .then(async () => {
 
         const {idReviewToUpdate, idReviewToInsert, idProdToUpdate} = fillReviews(productsInDB, productsNotInDB);
-
-        const productsToInsert = await getProductsToInsert(productsNotInDB, idReviewToInsert);
-        const productsToUpdate = getProductsToUpdate(idProdToUpdate, idReviewToUpdate);
-        const productsToUpsert = [...productsToInsert, ...productsToUpdate];
-
-        await updateInsertProducts(productsToUpsert);
+        await fillProducts(productsNotInDB, idReviewToInsert, idProdToUpdate, idReviewToUpdate);
 
         const urlToProductId = await getUrlToProductId()
 
-        const pricesChangedSameDay = await insertPrices(productsInDB, productsNotInDB, urlToProductId)
-        await updatePrices(pricesChangedSameDay)
+        await fillPrices(productsInDB, productsNotInDB, urlToProductId);
 
         const productsInDBWithNewAttr = Object.fromEntries(
             Object.entries(productsInDB).filter(
@@ -145,5 +139,6 @@ module.exports = {
     getProductCatalogUrls,
     updateInsertScrapedProducts,
     getProductUrlsInDB,
-    getProductsInDB
+    getProductsInDB,
+    getUrlToProductId
 }
