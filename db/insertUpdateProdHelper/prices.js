@@ -107,7 +107,8 @@ async function upsertPrices(pricesToUpsert){
     const query = `INSERT INTO prices 
             (id, price, date, productID)
             VALUES ? ON DUPLICATE KEY UPDATE
-            price = VALUES(price);`;
+            price = VALUES(price),
+            date = VALUES(date);`;
     
     await dbQuery(query, [pricesToUpsert])
     .catch(error => {

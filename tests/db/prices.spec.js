@@ -71,8 +71,8 @@ describe('Function upsertPrices', () => {
         const pricesTable = [[2, 12.6, '2021-09-21', 2], [3, 59.9, '2021-09-20', 3], [4, 69.9, '2021-09-21', 3],
                              [5, 10, '2021-09-21', 5], [6, 11, '2020-09-21', 6]];
 
-        const pricesToUpsert = [[null, 1.1, '2021-9-21', 1], [2, 13, null, null], [null, 70, '2021-9-21', 3]];
-        const expectedOutput = [[2, 13, '2021-9-21', 2], [3, 59.9, '2021-9-20', 3], [4, 69.9, '2021-9-21', 3],
+        const pricesToUpsert = [[null, 1.1, '2021-9-21', 1], [2, 13, today, null], [null, 70, '2021-9-21', 3]];
+        const expectedOutput = [[2, 13, dateToString(today), 2], [3, 59.9, '2021-9-20', 3], [4, 69.9, '2021-9-21', 3],
                                 [5, 10, '2021-9-21', 5], [6, 11, '2020-9-21', 6], [7, 1.1, '2021-9-21', 1], [8, 70, '2021-9-21', 3]];
 
         distributors.fill(distributorsTable);
