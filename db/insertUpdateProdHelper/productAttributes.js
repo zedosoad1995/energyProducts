@@ -3,6 +3,9 @@ const util = require('util');
 
 const dbQuery = util.promisify(db.query).bind(db);
 
+// TODO. What if value is undefined? How to choose: String or Number?
+// Ideia, no final agrupar todos os atributos e ver a moda. Se algum tiver um valor diferent, inseri-lo.
+// Ou entao... sera que o campo do tipo importa?
 function getAttributeType(str){
     if(isNaN(str))
         return 'String';
@@ -10,7 +13,7 @@ function getAttributeType(str){
         return 'Number';
 }
 
-async function insertProductAttributes(productsNotInDB, urlToProductId, productsInDBWithNewAttr){
+async function fillProductAttributes(productsNotInDB, urlToProductId, productsInDBWithNewAttr){
     let prodAttributesToInsert = [];
 
     [...Object.values(productsNotInDB), ...Object.values(productsInDBWithNewAttr)]
@@ -20,11 +23,12 @@ async function insertProductAttributes(productsNotInDB, urlToProductId, products
         const productId = urlToProductId[product['url']];
         const prodAttributes = product['more-details'];
 
-        const singleProdAttributesToInsert = Object.entries(prodAttributes).map(([attributeKey, attributeValue]) => {
-            return [attributeKey, attributeValue, getAttributeType(attributeValue), productId];
+        // TODO: Log quando houver key ou value undefined
+        Object.entries(prodAttributes).forEach(([attributeKey, attributeValue]) => {
+            if(attributeKey && attributeValue){
+                prodAttributesToInsert.push([attributeKey, attributeValue, getAttributeType(attributeValue), productId]);
+            }            
         });
-
-        prodAttributesToInsert = [...prodAttributesToInsert, ...singleProdAttributesToInsert];
     });
 
     if(prodAttributesToInsert.length == 0) return;
@@ -37,5 +41,5 @@ async function insertProductAttributes(productsNotInDB, urlToProductId, products
 }
 
 module.exports = {
-    insertProductAttributes
+    fillProductAttributes
 }

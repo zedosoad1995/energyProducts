@@ -4,7 +4,7 @@ const util = require('util');
 const {fillReviews} = require('./insertUpdateProdHelper/reviews');
 const {fillProducts} = require('./insertUpdateProdHelper/products');
 const {fillPrices} = require('./insertUpdateProdHelper/prices');
-const {insertProductAttributes} = require('./insertUpdateProdHelper/productAttributes');
+const {fillProductAttributes} = require('./insertUpdateProdHelper/productAttributes');
 
 const dbQuery = util.promisify(db.query).bind(db);
 const dbBeginTransaction = util.promisify(db.beginTransaction).bind(db);
@@ -123,7 +123,7 @@ async function updateInsertScrapedProducts(products, urlsNoAttributes){
                ([prodKey,]) => urlsNoAttributes.includes(prodKey)
             )
          );
-         await insertProductAttributes(productsNotInDB, urlToProductId, productsInDBWithNewAttr);
+         await fillProductAttributes(productsNotInDB, urlToProductId, productsInDBWithNewAttr);
 
          await dbCommit();
 
