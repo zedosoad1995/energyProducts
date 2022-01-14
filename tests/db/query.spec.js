@@ -1,4 +1,4 @@
-const {truncateAll, categories, distributors, products, productAttributes, prices, reviews} = require('../../db/dbModels');
+const {categories, distributors, products, productAttributes, prices, reviews} = require('../../db/dbModels');
 const {getProductCatalogUrls, getProductUrlsInDB, getProductsInDB, getUrlToProductId, updateDBWithScrapedProducts} = require('../../db/queries.js');
 
 function dateToString(date){
@@ -20,7 +20,7 @@ describe('Function getProductCatalogUrls, to get list of all complete url paths 
     });
 
     it('should return empty array, when there is no data in the tables', async () => {
-        await truncateAll();
+        distributors.truncate();
 
         expect(getProductCatalogUrls('dist1')).resolves.toStrictEqual([]);
     });
@@ -28,7 +28,6 @@ describe('Function getProductCatalogUrls, to get list of all complete url paths 
     it('should return empty array, when there is only data in table distributors', async () => {
         distributorsData = [['dist1', 'base1'], ['dist2', 'base2']];
 
-        await truncateAll();
         await distributors.fill(distributorsData);
 
         expect(getProductCatalogUrls('dist1')).resolves.toStrictEqual([]);

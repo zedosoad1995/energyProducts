@@ -1,24 +1,33 @@
-const {truncateAll, categories, distributors, products, productAttributes, prices, reviews} = require('../../db/dbModels');
+const {categories, distributors, products, productAttributes, prices, reviews} = require('../../db/dbModels');
 const {updateDBWithScrapedProducts} = require('../../db/queries.js');
-const rev = require('../../db/insertUpdateProdHelper/reviews.js');
-
-const delay = ms => new Promise(res => setTimeout(res, ms));
+const pricesHelper = require('../../db/insertUpdateProdHelper/prices.js');
 
 function dateToString(date){
     return date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();
 }
 
-jest.mock('../../db/insertUpdateProdHelper/reviews.js', () => {
-    const original = jest.requireActual('../../db/insertUpdateProdHelper/reviews.js');
+jest.mock('../../db/insertUpdateProdHelper/prices.js', () => {
+    const original = jest.requireActual('../../db/insertUpdateProdHelper/prices.js');
     return {
       ...original,
-      fillReviews: jest.fn()
+      fillPrices: jest.fn()
     };
 });
 
-describe('Function updateDBWithScrapedProducts', () => {
+describe('Function updateDBWithScrapedProducts Error', () => {
 
-    it(`Should Update the tables corretly with the new scraped products`, async () => {
+    it(`Should throw error when there is something wrong with the function, and then rollback, recovering the state of the tables.`, async () => {
+
+        const today = new Date();
+
+        const distributorsTable = [[1, 'dist1', 'base1'], [2, 'dist2', 'base2']];
+        const categoriesTable = [[1, 'Esquentador', 'url1', 1], [2, 'Termoacumulador', 'url2', 1], 
+                                [3, 'Esquentador', 'url3', 2], [4, 'Termoacumulador', 'url4', 2]];
+        const reviewsTable = [[1, 4.3, 12], [2, 1, 1]];
+        const productsTable = [[1, 'prod1', 'brand1', 'url1', 1, null, 1], [2, 'prod2', 'brand1', 'url2', 4, 1, 2], 
+                                [3, 'prod3', 'brand1', 'url3', 3, 2, 2]];
+        const pricesTable = [[1, 12.6, '2020-1-1', 1], [2, 13.6, '2020-1-2', 1], [3, 14.6, dateToString(today), 1], [4, 66, '2020-1-2', 2]];
+        const prodAttributesTable = [[1, 'at1', '1', 'Number', 2], [2, 'at3', 'cha', 'String', 2]];
 
         // undef price?
         // TODO: make price in table of type price (or something like that)
@@ -31,41 +40,29 @@ describe('Function updateDBWithScrapedProducts', () => {
                                 rating: undefined, price: 1}];
 
         const urlsNoAttributes = ['url1', 'url3'];
+        
+        await distributors.fill(distributorsTable);
+        await categories.fill(categoriesTable);
+        await reviews.fill(reviewsTable);
+        await products.fill(productsTable);
+        await prices.fill(pricesTable);
+        await productAttributes.fill(prodAttributesTable);
 
-        //const spy = jest.spyOn(rev, 'fillReviews')
+        pricesHelper.fillPrices.mockRejectedValueOnce(new Error());
+        
+        await expect(updateDBWithScrapedProducts(scrapedProds, urlsNoAttributes)).rejects.toThrow();
 
-        rev.fillReviews.mockRejectedValueOnce(new Error('fat'));
-        //await updateDBWithScrapedProducts(scrapedProds, urlsNoAttributes);
-        try{
-            await updateDBWithScrapedProducts(scrapedProds, urlsNoAttributes);
-        }catch(e){
-            expect(e.message).toEqual('a');
-        }
+        const reviewsOut = await reviews.get();
+        const productsOut = await products.get();
+        const pricesOut = await prices.get();
+        pricesOut.forEach((element, i) => {
+            pricesOut[i][2] = dateToString(element[2]);
+        });
+        const productAttributesOut = await productAttributes.get();
 
-
-        //await delay(2000);
-        //spy.mockRejectedValueOnce(new Error('fat'));
-        //rev.fillReviews.mockRejectedValueOnce(new Error('fa'));
-        //await updateDBWithScrapedProducts(scrapedProds, urlsNoAttributes);
-        //jest.restoreMock('../../db/insertUpdateProdHelper/reviews.js');
-        //await expect(updateDBWithScrapedProducts(scrapedProds, urlsNoAttributes)).rejects.toThrow('fat');
-        //console.log('done');
-        //rev.fillReviews.mockRejectedValueOnce(new Error('nice'));
-
-        /*await updateDBWithScrapedProducts(scrapedProds, urlsNoAttributes)
-        .then(async () => {
-            const reviewsOut = await reviews.get();
-            const productsOut = await products.get();
-            const pricesOut = await prices.get();
-            pricesOut.forEach((element, i) => {
-                pricesOut[i][2] = dateToString(element[2]);
-            });
-            const productAttributesOut = await productAttributes.get();
-
-            expect(reviewsOut).toStrictEqual(expectedReviews);
-            expect(productsOut).toStrictEqual(expectedProducts);
-            expect(pricesOut).toStrictEqual(expectedPrices);
-            expect(productAttributesOut).toStrictEqual(expectedProdAttributes);
-        });*/
+        expect(reviewsOut).toStrictEqual(reviewsTable);
+        expect(productsOut).toStrictEqual(productsTable);
+        expect(pricesOut).toStrictEqual(pricesTable);
+        expect(productAttributesOut).toStrictEqual(prodAttributesTable);
     });
 });

@@ -1,14 +1,5 @@
-jest.unmock('../../db/insertUpdateProdHelper/reviews.js');
-
 const {categories, distributors, products, reviews} = require('../../db/dbModels');
 const {getDistributorIds, getCategoryIds, getProductsToInsert, getProductsToUpdate, updateInsertProducts} = require('../../db/insertUpdateProdHelper/products.js');
-
-jest.mock('../../db/insertUpdateProdHelper/reviews.js', () => {
-    const original = jest.requireActual('../../db/insertUpdateProdHelper/reviews.js');
-    return {
-      ...original
-    };
-  });
 
 describe('Function getDistributorIds', () => {
 
