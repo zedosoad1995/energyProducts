@@ -1,6 +1,6 @@
 const { getWortenProducts } = require('../services/wortenService');
 const Promise = require("bluebird");
-const {getProductCatalogUrls, updateInsertScrapedProducts, getProductUrlsInDB} = require('../db/queries');
+const {getProductCatalogUrls, updateDBWithScrapedProducts, getProductUrlsInDB} = require('../db/queries');
 
 const wortenScraper = async (_, res, next) => {
     const urls = await getProductCatalogUrls('Worten')
@@ -27,7 +27,8 @@ const wortenScraper = async (_, res, next) => {
         throw error;
     });
 
-    await updateInsertScrapedProducts(scrapedProds, urlsNoAttributes).catch(error => {
+    await updateDBWithScrapedProducts(scrapedProds, urlsNoAttributes)
+    .catch(error => {
         console.log(error);
     });
 

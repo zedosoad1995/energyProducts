@@ -1,5 +1,16 @@
 const {productAttributes, distributors, products} = require('../../db/dbModels');
 const {fillProductAttributes} = require('../../db/insertUpdateProdHelper/productAttributes.js');
+const rev = require('../../db/insertUpdateProdHelper/reviews.js');
+
+jest.mock('../../db/insertUpdateProdHelper/reviews.js', () => {
+    const original = jest.requireActual('../../db/insertUpdateProdHelper/reviews.js');
+    return {
+      ...original,
+      fillReviews: jest.fn().mockRejectedValueOnce(new Error('gliii'))
+    };
+  });
+
+beforeAll(() => rev.fillReviews.mockRestore());
 
 describe('Function fillProductAttributes', () => {
 

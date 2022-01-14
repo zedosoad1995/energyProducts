@@ -117,7 +117,7 @@ async function upsertPrices(pricesToUpsert){
 }
 
 async function fillPrices(productsInDB, productsNotInDB, urlToProductId){
-    await getPricesToUpsert(productsInDB, productsNotInDB, urlToProductId);
+    const pricesToUpsert = await getPricesToUpsert(productsInDB, productsNotInDB, urlToProductId);
     await upsertPrices(pricesToUpsert);
 }
 

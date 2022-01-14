@@ -63,7 +63,7 @@ async function getCategoryIds(productsNotInDB, distributorIds){
 
 async function getProductsToInsert(productsNotInDB, idReviewsToInsert){
     if(Object.keys(productsNotInDB).length === 0) return;
-
+    
     if(Object.keys(productsNotInDB).length !== idReviewsToInsert.length){
         throw new Error(`'productsNotInDB' and 'idReviewsToInsert' have different length`);
     }

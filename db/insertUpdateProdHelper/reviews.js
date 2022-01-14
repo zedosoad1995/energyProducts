@@ -76,11 +76,11 @@ async function getInsertedIds_Reviews(lenIdsToUpdate, hasReview){
     });
 
     const idReviewToUpdate = ids.slice(0, lenIdsToUpdate);
-    const idReviewToInsert = getIdReviewToInsert(ids.slice(lenIdsToUpdate), hasReview);
+    const idReviewToInsert = await getIdReviewToInsert(ids.slice(lenIdsToUpdate), hasReview);
 
     return {
-        idReviewToUpdate: idReviewToUpdate, 
-        idReviewToInsert: idReviewToInsert, 
+        idReviewToUpdate, 
+        idReviewToInsert
     };
 }
 

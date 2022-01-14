@@ -1,5 +1,9 @@
+jest.unmock('../../db/insertUpdateProdHelper/reviews.js');
+
 const {distributors, products, reviews, prices} = require('../../db/dbModels');
 const {getChangedPrices, getFirstPrices_ProdInDB, upsertPrices} = require('../../db/insertUpdateProdHelper/prices.js');
+
+const rev = require('../../db/insertUpdateProdHelper/reviews.js');
 
 function dateToString(date){
     return date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();

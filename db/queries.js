@@ -9,6 +9,7 @@ const {fillProductAttributes} = require('./insertUpdateProdHelper/productAttribu
 const dbQuery = util.promisify(db.query).bind(db);
 const dbBeginTransaction = util.promisify(db.beginTransaction).bind(db);
 const dbCommit = util.promisify(db.commit).bind(db);
+const dbRollback = util.promisify(db.rollback).bind(db);
 
 // TODO: optional parameters dist
 // Get urls by distributor
@@ -103,41 +104,42 @@ async function getUrlToProductId(){
         });
 }
 
-async function updateInsertScrapedProducts(products, urlsNoAttributes){
+
+async function updateDBWithScrapedProducts(products, urlsNoAttributes){
     if(products.length == 0) return;
-
-    const {productsInDB, productsNotInDB} = await getProductsInDB(products);
     
-    await dbBeginTransaction()
-    .then(async () => {
+    try{
+        await dbBeginTransaction()
+        .then(async () => {
 
-        const {idReviewToUpdate, idReviewToInsert, idProdToUpdate} = fillReviews(productsInDB, productsNotInDB);
-        await fillProducts(productsNotInDB, idReviewToInsert, idProdToUpdate, idReviewToUpdate);
+            const {productsInDB, productsNotInDB} = await getProductsInDB(products)
 
-        const urlToProductId = await getUrlToProductId()
+            const {idReviewToUpdate, idReviewToInsert, idProdToUpdate} = await fillReviews(productsInDB, productsNotInDB);
 
-        await fillPrices(productsInDB, productsNotInDB, urlToProductId);
+            await fillProducts(productsNotInDB, idReviewToInsert, idProdToUpdate, idReviewToUpdate);
 
-        const productsInDBWithNewAttr = Object.fromEntries(
-            Object.entries(productsInDB).filter(
-               ([prodKey,]) => urlsNoAttributes.includes(prodKey)
-            )
-         );
-         await fillProductAttributes(productsNotInDB, urlToProductId, productsInDBWithNewAttr);
+            const urlToProductId = await getUrlToProductId()
 
-         await dbCommit();
+            await fillPrices(productsInDB, productsNotInDB, urlToProductId);
 
-    })
-    .catch(error => {
-        db.rollback(function() {
-            throw error;
+            const productsInDBWithNewAttr = Object.fromEntries(
+                Object.entries(productsInDB).filter(
+                ([prodKey,]) => urlsNoAttributes.includes(prodKey)
+                )
+            );
+            await fillProductAttributes(productsNotInDB, urlToProductId, productsInDBWithNewAttr);
+
+            await dbCommit();
         });
-    });
+    }catch(e){
+        await dbRollback();
+        throw new Error('a');
+    }
 }
 
 module.exports = {
     getProductCatalogUrls,
-    updateInsertScrapedProducts,
+    updateDBWithScrapedProducts,
     getProductUrlsInDB,
     getProductsInDB,
     getUrlToProductId
