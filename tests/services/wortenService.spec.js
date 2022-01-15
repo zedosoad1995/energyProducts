@@ -184,10 +184,11 @@ describe('Function convertProdAttribute to convert attribute from product', () =
 
     it('Should return the correct converted output for multiple valid inputs (Number attribute type)', () => {
 
-        const testInputOutputs = [["100 Euros", 100], ["    100 Euros asdds", 100], ["100,2 Euros", 100.2], ["2Euros", 2], [".2Euros", 0.2]];
+        const testInputOutputs = [["100 Euros", 100], ["    100 Euros asdds", 100], ["100,2 Euros", 100.2], ["2Euros", 2], [".2Euros", 0.2], 
+                                ["1/24", [1, 24]], ["1.1-24.4", [1.1, 24.4]], ["12°C", 12]];
         
         testInputOutputs.forEach(([input, output]) => {
-            expect(convertProdAttribute(input, 'Number')).toBe(output);
+            expect(convertProdAttribute(input, 'Number')).toEqual(output);
         })
     })
 

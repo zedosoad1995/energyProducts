@@ -8,14 +8,18 @@ const boolKeys = Worten['Booleans'];
 
 function convertProdAttribute(val, type){
     if(type === 'Number'){
-        // TODO: Deal with format number1/number2. Maybe return a list [number1, number2]. Deal with the insertion in DB.
         const convValueStr = val.trim()
                             .split(' ')[0]
-                            .replace(/[A-Za-z]/g, ' ')
-                            .replace(",", ".");
+                            .replace(/[^\d.,\/-]/g, ' ')
+                            .replace(",", ".")
+                            .replace("..", ".")
+
+        if(/^\d+(?:\.\d+)?[\/-]\d+(?:\.\d+)?/.test(convValueStr))
+            return convValueStr.match(/^(\d+(?:\.\d+)?)[\/-](\d+(?:\.\d+)?)/).slice(1).map(Number);
 
         const convValue = Number(convValueStr);
-                
+        
+        // TODO: Logging, para quando ha valor invalido (pensar tb sobre como resolver throw)
         if(convValueStr.trim().length === 0 || convValueStr[0] === ' ' || isNaN(convValue)) 
             throw new Error(`Invalid format for attribute type Number. Value received: ${val}`);
 
@@ -71,7 +75,14 @@ async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
                 if(numberKeys.includes(key)) attrType = 'Number'
                 else if(boolKeys.includes(key)) attrType = 'Bool'
 
-                productObj['more-details'][key] = convertProdAttribute(attrValue, attrType);
+                const convertedVal = convertProdAttribute(attrValue, attrType);
+
+                if(Array.isArray(convertedVal)){
+                    productObj['more-details'][key+'_low'] = convertedVal[0];
+                    productObj['more-details'][key+'_high'] = convertedVal[1];
+                }else{
+                    productObj['more-details'][key] = convertedVal;
+                }
             })
 
         }).catch(function (error) {

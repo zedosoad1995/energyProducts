@@ -33,8 +33,9 @@ async function getCategoryIds(productsNotInDB, distributorIds){
     // TODO: categoryTranslation? How to better deal with that
     const categoryNamesInDB = Object.values(productsNotInDB).map((product) => categoryTranslation[product['categories']]);
 
-    if(categoryNamesInDB.includes(undefined))
-        throw new Error(`undefined value in key 'categories'`);
+    // TODO: Uncomment
+    //if(categoryNamesInDB.includes(undefined))
+    //    throw new Error(`undefined value in key 'categories'`);
 
     const query = `SELECT id, name, distributorID
                     FROM categories
@@ -62,7 +63,7 @@ async function getCategoryIds(productsNotInDB, distributorIds){
 }
 
 async function getProductsToInsert(productsNotInDB, idReviewsToInsert){
-    if(Object.keys(productsNotInDB).length === 0) return;
+    if(Object.keys(productsNotInDB).length === 0) return [];
     
     if(Object.keys(productsNotInDB).length !== idReviewsToInsert.length){
         throw new Error(`'productsNotInDB' and 'idReviewsToInsert' have different length`);
@@ -77,7 +78,7 @@ async function getProductsToInsert(productsNotInDB, idReviewsToInsert){
 }
 
 function getProductsToUpdate(idProdToUpdate, idReviewToUpdate){
-    if(idProdToUpdate.length === 0 || idReviewToUpdate.length === 0) return;
+    if(idProdToUpdate.length === 0 || idReviewToUpdate.length === 0) return [];
 
     if(idProdToUpdate.some(isNaN) || idReviewToUpdate.some(isNaN) || idProdToUpdate.includes(null) || idReviewToUpdate.includes(null))
         throw new Error(`Input array contains invalid elements. All must be Numbers.`);
@@ -87,33 +88,6 @@ function getProductsToUpdate(idProdToUpdate, idReviewToUpdate){
 
     return idProdToUpdate.map((idProd, i) => [idProd, null, null, null, null, null, idReviewToUpdate[i]])
 }
-
-/*async function insertProducts(productsToInsert){
-    query = `INSERT INTO products (name, brand, url, categoryID, distributorID, reviewsID) VALUES ?;`;
-    res = await dbQuery(query, [productsToInsert])
-    .catch(error => {
-        throw(error);
-    });
-}
-
-async function updateProducts(idProdToUpdate, idReviewToUpdate){
-    if(idProdToUpdate.length == 0) return;
-
-    let productPropsToUpdate = [];
-    for(let i = 0; i < idProdToUpdate.length; i++){
-        productPropsToUpdate.push([idProdToUpdate[i], idReviewToUpdate[i]]);
-    }
-    
-    const query = `INSERT INTO products 
-            (id, reviewsID)
-            VALUES ? ON DUPLICATE KEY UPDATE
-            reviewsID = VALUES(reviewsID);`;
-    
-    await dbQuery(query, [productPropsToUpdate])
-    .catch(error => {
-        throw(error);
-    });
-}*/
 
 async function updateInsertProducts(products){
     if(products.length == 0) return;

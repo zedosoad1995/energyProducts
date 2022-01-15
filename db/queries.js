@@ -104,7 +104,6 @@ async function getUrlToProductId(){
         });
 }
 
-
 async function updateDBWithScrapedProducts(products, urlsNoAttributes){
     if(products.length == 0) return;
     
@@ -131,9 +130,10 @@ async function updateDBWithScrapedProducts(products, urlsNoAttributes){
 
             await dbCommit();
         });
-    }catch(e){
-        await dbRollback();
-        throw new Error('a');
+    }catch(error){
+        await dbRollback()
+        .catch(rollbackError => {throw(rollbackError)});
+        throw(error);
     }
 }
 
