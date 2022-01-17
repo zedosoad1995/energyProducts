@@ -56,7 +56,7 @@ function getIdReviewToInsert(idReviewToInsert, hasReview){
         }
     }
 
-    if(j < idReviewToInsert.length)
+    if(j < idReviewToInsert.filter(x => x === true).length)
         throw new Error('Too many ids in \'idReviewToInsertData\', for number of \'true\' in \'hasReview\'');
 
     return idReviewToInsertWithNull;
@@ -76,7 +76,7 @@ async function getInsertedIds_Reviews(lenIdsToUpdate, hasReview){
     });
 
     const idReviewToUpdate = ids.slice(0, lenIdsToUpdate);
-    const idReviewToInsert = await getIdReviewToInsert(ids.slice(lenIdsToUpdate), hasReview);
+    const idReviewToInsert = await getIdReviewToInsert(ids.slice(lenIdsToUpdate, lenIdsToUpdate + hasReview.length), hasReview);
 
     return {
         idReviewToUpdate, 
@@ -87,9 +87,12 @@ async function getInsertedIds_Reviews(lenIdsToUpdate, hasReview){
 async function getReviewsToUpdate(productsInDB, urlsToUpdate){
     if(Object.keys(productsInDB).length === 0 || urlsToUpdate.length === 0) return [];
 
-    const query = `SELECT url, reviewsID
-                FROM products 
-                WHERE url IN (?) AND reviewsID IS NOT NULL`;
+
+
+    const query = `
+        SELECT url, reviewsID
+        FROM products 
+        WHERE url IN (?) AND reviewsID IS NOT NULL`;
 
     return await dbQuery(query, [urlsToUpdate])
         .then(res => res.map(row => {
@@ -166,9 +169,10 @@ async function fillReviews(productsInDB, productsNotInDB){
     const {reviewsToInsert_ProdNotInDB, hasReview} = getReviewsToInsert_ProdNotInDB(productsNotInDB);
     const reviewsToInsert = [...reviewsToInsert_ProdInDB, ...reviewsToInsert_ProdNotInDB];
 
+    // TODO: Nao inserir se os valores ja tiverem na DB
     const reviewsToUpdate = await getReviewsToUpdate(productsInDB, urlsInDBWithNewReview);
 
-    const reviewsToUpsert= [...reviewsToInsert, ...reviewsToUpdate];
+    const reviewsToUpsert = [...reviewsToInsert, ...reviewsToUpdate];
 
     await updateInsertReviews(reviewsToUpsert);
 

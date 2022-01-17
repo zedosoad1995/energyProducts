@@ -76,10 +76,11 @@ async function getProductsInDB(products){
     });
 
     return products.reduce((obj, product) => {
-            if(urlsInDB.includes(product['url']))
+            if(urlsInDB.includes(product['url'])){
                 obj['productsInDB'][product['url']] = product;
-            else
+            }else{
                 obj['productsNotInDB'][product['url']] = product;
+            }
             return obj;
             }, 
             {'productsInDB': {}, 'productsNotInDB': {}}
@@ -112,6 +113,8 @@ async function updateDBWithScrapedProducts(products, urlsNoAttributes){
         .then(async () => {
 
             const {productsInDB, productsNotInDB} = await getProductsInDB(products)
+
+            console.log(Object.keys(productsInDB).length, Object.keys(productsNotInDB).length);
 
             const {idReviewToUpdate, idReviewToInsert, idProdToUpdate} = await fillReviews(productsInDB, productsNotInDB);
 

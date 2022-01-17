@@ -2,4 +2,19 @@ Re-check SQL statements like "INSERT IGNORE" and ways to insert only when rows a
 Learn about different nuances, and things like REPLACE or INSERT, KEY DUPLICATE UPDATE.
 May be possible to simplify Queries.
 
-Funcao para inserir valores na tabela muito mais facilmente em fase de teste (array/obj)
+Logging (e.g numero de linhas inseridas por table e talvez range dos ids)
+console.log lock IO
+
+**.controller.ts, **.service.ts, etc.
+
+Ver maneira de conseguir obter dados inseridos no dia x, ou na ultima insercao...
+Ter tb um registo de updates. Table.
+
+adaptador esquentador?
+
+Why reviews jump so much? 
+(maybe rollback, fazer com que o id volte ao normal)
+(Just found out it is better not to reset. But still nvestigate to be sure)
+(Acho que tem a ver com o insert de valores repetidos)
+
+EAN como unique identifier

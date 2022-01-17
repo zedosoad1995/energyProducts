@@ -54,7 +54,7 @@ async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
     productObj['url'] = product['default_url'];
     productObj['price'] = product['price'];
 
-    console.log(productObj['url']);
+    //console.log(productObj['url']);
 
     const hasProductAttributesInDB = urlsWithAttributes.includes(productObj['url']);
 
@@ -133,13 +133,13 @@ async function getWortenProducts(url, urlsWithAttributes){
 
     while(!lastPage){
 
-        const urlPage = url + "?x-event-type=product_list%3Arefresh&page=" + pageNum;
+        const urlPage = url + "?sort_by=name&x-event-type=product_list%3Arefresh&page=" + pageNum;
         let productsInfo = await getPageProductsInfo(urlPage, axiosConfig);
 
         // get product details
         // TODO: return val, instead of pass by reference
         await Promise.map(productsInfo['products'],
-            (product) => getProductInfo(scrapedProducts, product, urlsWithAttributes),
+            product => getProductInfo(scrapedProducts, product, urlsWithAttributes),
             { concurrency: 6 }
         )
         .catch((error) => {
@@ -153,6 +153,7 @@ async function getWortenProducts(url, urlsWithAttributes){
         if(productsInfo['offset']['max'] >= productsInfo['offsetMax'])
             lastPage = true;
 
+        console.log(pageNum);
         pageNum++;
     }
 
