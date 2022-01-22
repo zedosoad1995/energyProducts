@@ -1,52 +1,11 @@
 const db = require('../db/config');
 const util = require('util');
 const _ = require('lodash');
-const { val } = require('cheerio/lib/api/attributes');
 
 const dbQuery = util.promisify(db.query).bind(db);
 
-async function getDatatype(attribute){
-    const query = `
-        SELECT datatype
-        FROM productAttributes
-        WHERE attributeName = '${attribute}'
-        LIMIT 1;`;
-
-    return dbQuery(query)
-            .then(row => row[0]['datatype'])
-            .catch(error => {
-                throw(error);
-            });
-}
-
-async function getSelectTemplateStr(attribute, idx){
-    const datatype = await getDatatype(attribute);
-
-    const datatypeStr = (datatype === 'Number') ? 'DECIMAL(11, 4)' : 'CHAR'
-
-    return `CAST(pa${idx}.\`${attribute}\` AS ${datatypeStr}) AS \`${attribute}\`, `;
-}
-
-function getJoinTemplateStr(attribute, idx){
-    return `
-        LEFT JOIN (
-            SELECT productID, value AS \`${attribute}\`
-            FROM productAttributes
-            WHERE attributeName = '${attribute}'
-        ) pa${idx}
-            ON pa${idx}.productID = p.id`;
-}
-
 async function hasInvalidAttributeNames(attributesToDisplay, invalidAttributeNames){
-    const query = `
-        SELECT DISTINCT attributeName
-        FROM productAttributes;`;
-
-    const allAttributeNames =  await dbQuery(query)
-                                .then(row => row.map(val => val['attributeName']))
-                                .catch(error => {
-                                    throw(error);
-                                });
+    const allAttributeNames = await getProductAttributeNames();
 
     attributesToDisplay.forEach(attr => {
         if(!allAttributeNames.includes(attr)){
@@ -71,26 +30,145 @@ async function errorHandling_getProductsToDisplay(attributesToDisplay, attribute
     if(attributesToSort.some(val => !attributesToDisplay.includes(val)))
         throw new Error(`All values in 'attributesToSort' must be exist in 'attributesToDisplay'`);
 
-    let invalidAttributeNames = [];
+    /*let invalidAttributeNames = [];
     if(await hasInvalidAttributeNames(attributesToDisplay, invalidAttributeNames))
-        throw new Error(`'attributesToDisplay' contains attributes that to not exist in the DB: ${invalidAttributeNames.join(', ')}`);
+        throw new Error(`'attributesToDisplay' contains attributes that to not exist in the DB: ${invalidAttributeNames.join(', ')}`);*/
 }
 
-async function getQuery(attributesToDisplay){
-    let {joinStr, selectStr} = await attributesToDisplay.reduce(async (obj, attribute, i) => {   
+async function getDatatype(attribute){
+    const query = `
+        SELECT datatype
+        FROM productAttributes
+        WHERE attributeName = '${attribute}'
+        LIMIT 1;`;
+
+    return dbQuery(query)
+            .then(row => row[0]['datatype'])
+            .catch(error => {
+                throw(error);
+            });
+}
+
+async function getSelectTemplateStr(attribute, idx){
+    const datatype = await getDatatype(attribute);
+
+    const datatypeStr = (datatype === 'Number') ? 'DECIMAL(11, 4)' : 'CHAR'
+
+    return `CAST(pa${idx}.\`${attribute}\` AS ${datatypeStr}) AS \`${attribute}\``;
+}
+
+function getJoinTemplateStr(attribute, idx){
+    return `
+        LEFT JOIN (
+            SELECT productID, value AS \`${attribute}\`
+            FROM productAttributes
+            WHERE attributeName = '${attribute}'
+        ) pa${idx}
+            ON pa${idx}.productID = products.id`;
+}
+
+async function getProductAttributeNames(){
+    const query = `
+        SELECT DISTINCT attributeName
+        FROM productAttributes;`;
+
+    return dbQuery(query)
+            .then(row => row.map(val => val['attributeName']))
+            .catch(error => {
+                throw(error);
+            });
+}
+
+async function getProdAttrQueryParts(attributesToDisplay){
+    const validAttr = await getProductAttributeNames();
+
+    let {prodAttrJoins, prodAttrSelects} = await attributesToDisplay.reduce(async (obj, attribute, i) => {   
         await obj.then(async (res) => {
-            res['joinStr'] += getJoinTemplateStr(attribute, i);
-            res['selectStr'] += await getSelectTemplateStr(attribute, i);
+
+            if(validAttr.includes(attribute)){
+                res['prodAttrJoins'].push(getJoinTemplateStr(attribute, i));
+                res['prodAttrSelects'].push(await getSelectTemplateStr(attribute, i));
+            }
         })
 
         return obj;
-    }, Promise.resolve({joinStr: '', selectStr: ''}));
+    }, Promise.resolve({prodAttrJoins: [], prodAttrSelects: []}));
 
-    selectStr = selectStr.substring(0, selectStr.length - 2);
+    return {prodAttrJoins, prodAttrSelects};
+}
+
+const getQueryParts = ({validAttributes, fieldNames, tableName, joinFieldProduct = 'id', joinFieldNewTable = 'id'}) => attributesToDisplay => {
+    let hasJoin = false;
+
+    let queryParts = validAttributes.reduce((obj, attribute, i) => {
+        if(attributesToDisplay.includes(attribute)){
+            obj['selects'].push(`${tableName}.${fieldNames[i]} AS ${attribute}`);
+
+            if(!hasJoin){
+                obj['joins'] = [
+                    `
+                    LEFT JOIN ${tableName}
+                        ON ${tableName}.${joinFieldNewTable} = products.${joinFieldProduct}
+                    `];
+
+                hasJoin = true;
+            }
+        }
+
+        return obj;
+    }, {selects: [], joins: []});
+
+    queryParts[tableName+'Selects'] = queryParts['selects'];
+    delete queryParts['selects'];
+
+    queryParts[tableName+'Joins'] = queryParts['joins'];
+    delete queryParts['joins'];
+
+    return queryParts;
+};
+
+const getDistributorQueryParts = getQueryParts({validAttributes: ['distributor'], 
+                                        fieldNames: ['name'],
+                                        tableName: 'distributors', 
+                                        joinFieldProduct: 'distributorID'});
+
+const getCategoryQueryParts = getQueryParts({
+                                        validAttributes: ['category'], 
+                                        fieldNames: ['name'],
+                                        tableName: 'categories', 
+                                        joinFieldProduct: 'categoryID'});
+
+const getReviewQueryParts = getQueryParts({
+                                        validAttributes: ['rating', 'numReviews'], 
+                                        fieldNames: ['rating', 'numReviews'],
+                                        tableName: 'reviews', 
+                                        joinFieldProduct: 'reviewsID'});
+
+const getPriceQueryParts = getQueryParts({
+                                        validAttributes: ['price'], 
+                                        fieldNames: ['price'],
+                                        tableName: 'prices', 
+                                        joinFieldNewTable: 'productID'});
+
+const getProductsQueryParts = getQueryParts({
+                                        validAttributes: ['url', 'marca'], 
+                                        fieldNames: ['url', 'marca'],
+                                        tableName: 'products'});
+
+async function getQuery(attributesToDisplay){
+    const {distributorsSelects, distributorsJoins} = getDistributorQueryParts(attributesToDisplay);
+    const {categoriesSelects, categoriesJoins} = getCategoryQueryParts(attributesToDisplay);
+    const {reviewsSelects, reviewsJoins} = getReviewQueryParts(attributesToDisplay);
+    const {pricesSelects, pricesJoins} = getPriceQueryParts(attributesToDisplay);
+    const {productsSelects,} = getProductsQueryParts(attributesToDisplay);
+    const {prodAttrJoins, prodAttrSelects} = await getProdAttrQueryParts(attributesToDisplay);
+
+    const selects = [...distributorsSelects, ...categoriesSelects, ...reviewsSelects, ...pricesSelects, ...productsSelects, ...prodAttrSelects].join(', ');
+    const joins = [...distributorsJoins, ...categoriesJoins, ...reviewsJoins, ...pricesJoins, ...prodAttrJoins].join('');
 
     return `
-        SELECT p.id, ${selectStr}
-        FROM products p ${joinStr}`;
+        SELECT products.name AS name, ${selects}
+        FROM products ${joins}`;
 }
 
 function sortProducts(products, attributesToSort, order){
@@ -149,7 +227,7 @@ function canFilterProduct(product, filters){
         });
 }
 
-// request = {attributesToDisplay: string[], attributesToSort: string[], order: string[]}
+// request = {attributesToDisplay: string[], attributesToSort: string[], order: string[], filters: [string[], ...]}
 async function getProductsForDisplay(request){
     const {attributesToDisplay, attributesToSort, order, filters} = request;
 
@@ -168,12 +246,13 @@ async function getProductsForDisplay(request){
 }
 
 getProductsForDisplay({
-    attributesToDisplay: ['EAN', 'Marca', 'Peso', 'Altura'], 
+    attributesToDisplay: ['EAN', 'Marca', 'Peso', 'Altura', 'distributor', 'category', 'rating', 'price', 'numReviews'], 
     attributesToSort: ['Peso'], 
     order: ['DESC'],
-    filters: [['between', 'Peso', 24, 25], ['greater', 'Altura', 100], ['not includes', 'Marca', ['VULCANO']]]
+    filters: [['between', 'Peso', 10, 25]]
 })
-.then(console.log);
+.then(console.log)
+.catch(console.error);
 
 module.exports = {
     getProductsForDisplay
