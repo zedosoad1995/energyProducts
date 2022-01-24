@@ -4,6 +4,7 @@ const mysql = require('mysql');
 
 const db = mysql.createConnection(dbConfig);
 
+
 db.connect(function(err) {
     if (err) throw err;
 });

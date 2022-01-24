@@ -1,6 +1,8 @@
 const db = require('../db/config');
 const util = require('util');
 const _ = require('lodash');
+const {clip} = require('./utils/math');
+require('dotenv').config();
 
 const dbQuery = util.promisify(db.query).bind(db);
 
@@ -17,7 +19,7 @@ async function hasInvalidAttributeNames(attributesToDisplay, invalidAttributeNam
 }
 
 // TODO: Colocar error noutras funcoes?
-async function errorHandling_getProductsToDisplay(attributesToDisplay, attributesToSort, order){
+async function errorHandling_getProductsToDisplay(attributesToDisplay, attributesToSort, order, filters){
     if(attributesToDisplay.length === 0)
         throw new Error(`'attributesToSort' has length zero`);
 
@@ -29,6 +31,9 @@ async function errorHandling_getProductsToDisplay(attributesToDisplay, attribute
 
     if(attributesToSort.some(val => !attributesToDisplay.includes(val)))
         throw new Error(`All values in 'attributesToSort' must be exist in 'attributesToDisplay'`);
+    
+    if(filters.some(filter => !attributesToDisplay.includes(filter[1])))
+        throw new Error(`All values in 'filters' must be exist in 'attributesToDisplay'`);
 
     /*let invalidAttributeNames = [];
     if(await hasInvalidAttributeNames(attributesToDisplay, invalidAttributeNames))
@@ -98,36 +103,26 @@ async function getProdAttrQueryParts(attributesToDisplay){
 }
 
 const getQueryParts = ({validAttributes, fieldNames, tableName, joinFieldProduct = 'id', joinFieldNewTable = 'id'}) => attributesToDisplay => {
-    let hasJoin = false;
-
-    let queryParts = validAttributes.reduce((obj, attribute, i) => {
+    
+    const {selects, joins} = validAttributes.reduce((obj, attribute, i) => {
         if(attributesToDisplay.includes(attribute)){
             obj['selects'].push(`${tableName}.${fieldNames[i]} AS ${attribute}`);
 
-            if(!hasJoin){
-                obj['joins'] = [
-                    `
-                    LEFT JOIN ${tableName}
-                        ON ${tableName}.${joinFieldNewTable} = products.${joinFieldProduct}
-                    `];
-
-                hasJoin = true;
-            }
+            obj['joins'] = [
+                `
+                LEFT JOIN ${tableName}
+                    ON ${tableName}.${joinFieldNewTable} = products.${joinFieldProduct}
+                `];
         }
 
         return obj;
     }, {selects: [], joins: []});
 
-    queryParts[tableName+'Selects'] = queryParts['selects'];
-    delete queryParts['selects'];
-
-    queryParts[tableName+'Joins'] = queryParts['joins'];
-    delete queryParts['joins'];
-
-    return queryParts;
+    return [selects, joins];
 };
 
-const getDistributorQueryParts = getQueryParts({validAttributes: ['distributor'], 
+const getDistributorQueryParts = getQueryParts({
+                                        validAttributes: ['distributor'], 
                                         fieldNames: ['name'],
                                         tableName: 'distributors', 
                                         joinFieldProduct: 'distributorID'});
@@ -156,11 +151,11 @@ const getProductsQueryParts = getQueryParts({
                                         tableName: 'products'});
 
 async function getQuery(attributesToDisplay){
-    const {distributorsSelects, distributorsJoins} = getDistributorQueryParts(attributesToDisplay);
-    const {categoriesSelects, categoriesJoins} = getCategoryQueryParts(attributesToDisplay);
-    const {reviewsSelects, reviewsJoins} = getReviewQueryParts(attributesToDisplay);
-    const {pricesSelects, pricesJoins} = getPriceQueryParts(attributesToDisplay);
-    const {productsSelects,} = getProductsQueryParts(attributesToDisplay);
+    const [distributorsSelects, distributorsJoins] = getDistributorQueryParts(attributesToDisplay);
+    const [categoriesSelects, categoriesJoins] = getCategoryQueryParts(attributesToDisplay);
+    const [reviewsSelects, reviewsJoins] = getReviewQueryParts(attributesToDisplay);
+    const [pricesSelects, pricesJoins] = getPriceQueryParts(attributesToDisplay);
+    const [productsSelects,] = getProductsQueryParts(attributesToDisplay);
     const {prodAttrJoins, prodAttrSelects} = await getProdAttrQueryParts(attributesToDisplay);
 
     const selects = [...distributorsSelects, ...categoriesSelects, ...reviewsSelects, ...pricesSelects, ...productsSelects, ...prodAttrSelects].join(', ');
@@ -197,7 +192,6 @@ function correctProdAttr(product){
             product['Altura'] /= 10;
         }
     }
-
     return product;
 }
 
@@ -206,9 +200,13 @@ function correctProdAttr(product){
 // less: [command:less(equal), attr, val:max]
 // includes: [command:includes, attr, string[]]
 // not includes: [command:notincludes, attr, string[]]
+// TODO: error quando o atributo nao existe
 function canFilterProduct(product, filters){
     return filters.every(filter => {
             const [command, attr, ...vals] = filter;
+
+            // TODO: deal with this case
+            if(!(attr in product)) return true;
 
             switch(command) {
                 case 'between':
@@ -228,10 +226,13 @@ function canFilterProduct(product, filters){
 }
 
 // request = {attributesToDisplay: string[], attributesToSort: string[], order: string[], filters: [string[], ...]}
-async function getProductsForDisplay(request){
+async function getProductsForDisplay(request, limit = 20, skip = 0){
+    limit = clip(limit, 0, process.env.MAX_ITEMS_PER_PAGE);
+    skip = clip(skip, 0, skip);
+
     const {attributesToDisplay, attributesToSort, order, filters} = request;
 
-    errorHandling_getProductsToDisplay(attributesToDisplay, attributesToSort, order);
+    await errorHandling_getProductsToDisplay(attributesToDisplay, attributesToSort, order, filters);
 
     const query = await getQuery(attributesToDisplay)
 
@@ -240,19 +241,11 @@ async function getProductsForDisplay(request){
     .then(prods => prods.map((product) => correctProdAttr(product)))
     .then(prods => prods.filter(product => canFilterProduct(product, filters)))
     .then(prods => sortProducts(prods, attributesToSort, order))
+    .then(prods => prods.slice(skip, skip + limit))
     .catch(error => {
         throw(error);
     });
 }
-
-getProductsForDisplay({
-    attributesToDisplay: ['EAN', 'Marca', 'Peso', 'Altura', 'distributor', 'category', 'rating', 'price', 'numReviews'], 
-    attributesToSort: ['Peso'], 
-    order: ['DESC'],
-    filters: [['between', 'Peso', 10, 25]]
-})
-.then(console.log)
-.catch(console.error);
 
 module.exports = {
     getProductsForDisplay

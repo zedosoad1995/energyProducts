@@ -1,7 +1,7 @@
 const axios = require('axios');
 const cheerio = require("cheerio");
 const Promise = require("bluebird");
-const {Worten} = require('./data/attributesTypes.json');
+const {Worten} = require('../data/attributesTypes.json');
 
 const numberKeys = Worten['Numbers'];
 const boolKeys = Worten['Booleans'];
