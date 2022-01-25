@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTable, usePagination } from 'react-table';
 import styled from 'styled-components';
 import { getProducts } from './services/product.service';
@@ -84,22 +84,47 @@ function Table({ columns, data }) {
 function App() {
   const [products, setProducts] = useState([]);
   const [columns, setColumns] = useState([]);
+  const [skip, setSkip] = useState(0);
+  const [limit, setLimit] = useState(20);
 
-  useEffect(() => {
-    getProducts(100)
+  function displayProducts(limit, skip){
+    getProducts(limit, skip)
     .then(({products, columns}) => {
       setProducts(products);
       setColumns(columns);
-      console.log(columns);
     })
     .catch(error => {
       console.log(error);
     });
+  }
+
+  useEffect(() => {
+    displayProducts();
   }, []);
+
+  useMemo(() => {
+    displayProducts(limit, skip);
+  }, [limit, skip])
+
+  function nextPage(){
+    setSkip(skip + limit);
+  }
+
+  function previousPage(){
+    setSkip(skip - limit);
+  }
 
   return (
     <Styles>
       <Table columns={columns} data={products} />
+      <div className="pagination">
+        <button onClick={() => previousPage()}>
+            {'<'}
+          </button>{' '}
+        <button onClick={() => nextPage()}>
+          {'>'}
+        </button>{' '}
+      </div>
     </Styles>
   )
 }
