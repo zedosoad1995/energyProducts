@@ -233,7 +233,7 @@ function canFilterProduct(product, filters){
 // request = {attributesToDisplay: string[], attributesToSort: string[], order: string[], filters: [string[], ...]}
 async function getProductsForDisplay(request, limit = 20, skip = 0){
     limit = clip(limit, 0, process.env.MAX_ITEMS_PER_PAGE);
-    skip = clip(skip, 0, skip);
+    skip = (skip < 0) ? 0 : skip;
 
     const {attributesToDisplay, attributesToSort, order, filters} = request;
 

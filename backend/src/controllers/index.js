@@ -2,6 +2,7 @@ const { getWortenProducts } = require('../services/scrape/worten.service');
 const { getProductsForDisplay } = require('../services/products.service');
 const Promise = require("bluebird");
 const {getProductCatalogUrls, updateDBWithScrapedProducts, getProductUrlsInDB} = require('../db/queries');
+const {getHeader} = require('../services/utils/dataManipulation');
 
 async function wortenScraper(_, res, next){
     const urls = await getProductCatalogUrls('Worten')
@@ -41,7 +42,7 @@ async function getProducts(req, res, next){
     .then(prods => {
         res.status(200).json({
             products: prods,
-            header: Object.keys(prods[0])
+            header: getHeader(prods)
         });
     })
     .catch(error => {

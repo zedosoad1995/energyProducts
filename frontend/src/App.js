@@ -1,15 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { useTable, usePagination } from 'react-table';
 import styled from 'styled-components';
 import { getProducts } from './services/product.service';
 
 const Styles = styled.div`
   padding: 1rem;
-
   table {
     border-spacing: 0;
     border: 1px solid black;
-
     tr {
       :last-child {
         td {
@@ -17,14 +15,12 @@ const Styles = styled.div`
         }
       }
     }
-
     th,
     td {
       margin: 0;
       padding: 0.5rem;
       border-bottom: 1px solid black;
       border-right: 1px solid black;
-
       :last-child {
         border-right: 0;
       }
@@ -85,13 +81,18 @@ function App() {
   const [products, setProducts] = useState([]);
   const [columns, setColumns] = useState([]);
   const [skip, setSkip] = useState(0);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(10);
+  const previousButton = useRef();
+  const [hasReceivedData, setHasReceivedData] = useState(true);
 
   function displayProducts(limit, skip){
     getProducts(limit, skip)
     .then(({products, columns}) => {
       setProducts(products);
       setColumns(columns);
+      if(columns.length > 0){
+        setHasReceivedData(false);
+      }
     })
     .catch(error => {
       console.log(error);
@@ -99,12 +100,14 @@ function App() {
   }
 
   useEffect(() => {
-    displayProducts();
-  }, []);
+    if(skip === 0){
+      previousButton.current.disabled = true;
+    }else{
+      previousButton.current.disabled = false;
+    }
 
-  useMemo(() => {
     displayProducts(limit, skip);
-  }, [limit, skip])
+  }, [limit, skip]);
 
   function nextPage(){
     setSkip(skip + limit);
@@ -117,8 +120,8 @@ function App() {
   return (
     <Styles>
       <Table columns={columns} data={products} />
-      <div className="pagination">
-        <button onClick={() => previousPage()}>
+      <div className="pagination" hidden={hasReceivedData}>
+        <button onClick={() => previousPage()} ref={previousButton}>
             {'<'}
           </button>{' '}
         <button onClick={() => nextPage()}>
