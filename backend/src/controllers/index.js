@@ -1,8 +1,9 @@
-const { getWortenProducts } = require('../services/wortenService');
+const { getWortenProducts } = require('../services/scrape/worten.service');
+const { getProductsForDisplay } = require('../services/products.service');
 const Promise = require("bluebird");
 const {getProductCatalogUrls, updateDBWithScrapedProducts, getProductUrlsInDB} = require('../db/queries');
 
-const wortenScraper = async (_, res, next) => {
+async function wortenScraper(_, res, next){
     const urls = await getProductCatalogUrls('Worten')
     .catch((err) => {
         res.sendStatus(500)
@@ -35,6 +36,21 @@ const wortenScraper = async (_, res, next) => {
     res.sendStatus(201);
 }
 
+async function getProducts(req, res, next){
+    await getProductsForDisplay(req.body.tableOptions, req.body.limit, req.body.skip)
+    .then(prods => {
+        res.status(200).json({
+            products: prods,
+            header: Object.keys(prods[0])
+        });
+    })
+    .catch(error => {
+        console.error(error);
+        res.status(400).send('Bad Request');
+    });
+}
+
 module.exports = {
-    wortenScraper
+    wortenScraper,
+    getProducts
 }

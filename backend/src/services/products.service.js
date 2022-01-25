@@ -20,19 +20,22 @@ async function hasInvalidAttributeNames(attributesToDisplay, invalidAttributeNam
 
 // TODO: Colocar error noutras funcoes?
 async function errorHandling_getProductsToDisplay(attributesToDisplay, attributesToSort, order, filters){
+    if(!attributesToDisplay)
+        throw new Error(`'attributesToDisplay' does not exist`);
+
     if(attributesToDisplay.length === 0)
         throw new Error(`'attributesToSort' has length zero`);
 
-    if(attributesToSort.length !== order.length)
+    if(order && attributesToSort.length !== order.length)
         throw new Error(`'attributesToSort' and 'order' must have the same length.`);
 
-    if(order.some(val => !['ASC', 'DESC'].includes(val)))
+    if(order && order.some(val => !['ASC', 'DESC'].includes(val)))
         throw new Error(`'order' can only contain the values: 'ASC', 'DESC'.`);
 
-    if(attributesToSort.some(val => !attributesToDisplay.includes(val)))
+    if(attributesToSort && attributesToSort.some(val => !attributesToDisplay.includes(val)))
         throw new Error(`All values in 'attributesToSort' must be exist in 'attributesToDisplay'`);
     
-    if(filters.some(filter => !attributesToDisplay.includes(filter[1])))
+    if(filters && filters.some(filter => !attributesToDisplay.includes(filter[1])))
         throw new Error(`All values in 'filters' must be exist in 'attributesToDisplay'`);
 
     /*let invalidAttributeNames = [];
@@ -162,12 +165,12 @@ async function getQuery(attributesToDisplay){
     const joins = [...distributorsJoins, ...categoriesJoins, ...reviewsJoins, ...pricesJoins, ...prodAttrJoins].join('');
 
     return `
-        SELECT products.name AS name, ${selects}
+        SELECT products.name AS name ${(selects)? ',' : ''} ${selects}
         FROM products ${joins}`;
 }
 
 function sortProducts(products, attributesToSort, order){
-    if(order.length === 0) return products;
+    if(!attributesToSort || !order || order.length === 0) return products;
 
     const sortNameToVal = {
         ASC: 1,
@@ -202,6 +205,8 @@ function correctProdAttr(product){
 // not includes: [command:notincludes, attr, string[]]
 // TODO: error quando o atributo nao existe
 function canFilterProduct(product, filters){
+    if(!filters) return true;
+
     return filters.every(filter => {
             const [command, attr, ...vals] = filter;
 
@@ -237,7 +242,7 @@ async function getProductsForDisplay(request, limit = 20, skip = 0){
     const query = await getQuery(attributesToDisplay)
 
     // TODO: fazer conversao do tipo aqui?
-    return dbQuery(query)
+    return await dbQuery(query)
     .then(prods => prods.map((product) => correctProdAttr(product)))
     .then(prods => prods.filter(product => canFilterProduct(product, filters)))
     .then(prods => sortProducts(prods, attributesToSort, order))
