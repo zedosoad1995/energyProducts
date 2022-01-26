@@ -85,6 +85,9 @@ function App() {
   const [limit, setLimit] = useState(10);
   const [maxSize, setMaxSize] = useState(0);
 
+  const [pageNum, setPageNum] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
   const previousButton = useRef();
   const nextButton = useRef();
 
@@ -106,6 +109,16 @@ function App() {
       console.log(error);
     });
   }
+
+  useEffect(() => {
+    setPageNum(Math.floor((limit - 1 + offset)/limit) + 1);
+
+  }, [limit, offset]);
+
+  useEffect(() => {
+    setTotalPages((maxSize > 0) ? Math.floor((maxSize-1)/limit) + 1 : 0);
+
+  }, [limit, maxSize]);
 
   useEffect(() => {
     if(offset + limit >= maxSize){
@@ -138,12 +151,48 @@ function App() {
     <Styles>
       <Table columns={columns} data={products} />
       <div className="pagination" hidden={hasReceivedData}>
+        <button>
+          {'<<'}
+        </button>{' '}
         <button onClick={() => previousPage()} ref={previousButton}>
             {'<'}
           </button>{' '}
         <button onClick={() => nextPage()} ref={nextButton}>
           {'>'}
         </button>{' '}
+        <button>
+          {'>>'}
+        </button>{' '}
+        <span>
+          Page{' '}
+          <strong>
+            {pageNum} of {totalPages}
+          </strong>{' '}
+        </span>
+        {/*<select
+        <span>
+          | Go to page:{' '}
+          <input
+            type="number"
+            defaultValue={pageIndex + 1}
+            onChange={e => {
+              const page = e.target.value ? Number(e.target.value) - 1 : 0
+              gotoPage(page)
+            }}
+            style={{ width: '100px' }}
+          />
+        </span>{' '}
+          value={pageSize}
+          onChange={e => {
+            setPageSize(Number(e.target.value))
+          }}
+        >
+          {[10, 20, 30, 40, 50].map(pageSize => (
+            <option key={pageSize} value={pageSize}>
+              Show {pageSize}
+            </option>
+          ))}
+          </select>*/}
       </div>
     </Styles>
   )

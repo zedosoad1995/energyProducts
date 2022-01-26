@@ -38,14 +38,17 @@ async function wortenScraper(_, res, next){
 }
 
 async function getProducts(req, res, next){
-    await getProductsForDisplay(req.body.tableOptions, req.body.limit, req.body.offset)
+    const limit = parseInt(req.query.limit);
+    const offset = parseInt(req.query.offset);
+
+    await getProductsForDisplay(req.body.tableOptions, limit, offset)
     .then(prods => {
         res.status(200).json({
             products: prods['data'],
             maxSize: prods['maxSize'],
             header: getHeader(prods['data']),
-            limit: req.body.limit,
-            offset: req.body.offset
+            limit: limit,
+            offset: offset
         });
     })
     .catch(error => {
