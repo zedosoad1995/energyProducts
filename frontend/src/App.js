@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTable, usePagination } from 'react-table';
 import styled from 'styled-components';
 import { getProducts } from './services/product.service';
@@ -25,6 +25,10 @@ const Styles = styled.div`
         border-right: 0;
       }
     }
+  }
+
+  .pagination {
+    padding: 0.5rem;
   }
 `
 
@@ -81,11 +85,11 @@ function App() {
   const [products, setProducts] = useState([]);
   const [columns, setColumns] = useState([]);
 
+  const [pageSize, setPageSize] = useState(10);
   const [offset, setOffset] = useState(0);
-  const [limit, setLimit] = useState(10);
   const [maxSize, setMaxSize] = useState(0);
 
-  const [pageNum, setPageNum] = useState(0);
+  const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
 
   const firstPageButton = useRef();
@@ -95,8 +99,12 @@ function App() {
 
   const [hasReceivedData, setHasReceivedData] = useState(true);
 
-  function displayProducts(limit, offset){
-    getProducts(limit, offset)
+  function displayProducts(page, pageSize){
+
+    const offsetVal = (page - 1)*pageSize;
+    setOffset(offsetVal);
+
+    getProducts(pageSize, offsetVal)
     .then(({products, columns, maxSize}) => {
 
       setProducts(products);
@@ -113,17 +121,16 @@ function App() {
   }
 
   useEffect(() => {
-    setPageNum(Math.floor((limit - 1 + offset)/limit) + 1);
-
-  }, [limit, offset]);
-
-  useEffect(() => {
-    setTotalPages((maxSize > 0) ? Math.floor((maxSize-1)/limit) + 1 : 0);
-
-  }, [limit, maxSize]);
+    displayProducts(page, pageSize);
+  }, [page, pageSize]);
 
   useEffect(() => {
-    if(offset + limit >= maxSize){
+    const totalPages = (maxSize > 0) ? Math.ceil(maxSize/pageSize) : 0;
+    setTotalPages(totalPages);
+  }, [pageSize, maxSize]);
+
+  useEffect(() => {
+    if(page >= totalPages){
       nextPageButton.current.disabled = true;
       lastPageButton.current.disabled = true;
     }else{
@@ -131,10 +138,10 @@ function App() {
       lastPageButton.current.disabled = false;
     }
 
-  }, [limit, offset, maxSize]);
+  }, [page, totalPages]);
 
   useEffect(() => {
-    if(offset === 0){
+    if(page === 1){
       previousPageButton.current.disabled = true;
       firstPageButton.current.disabled = true;
     }else{
@@ -142,19 +149,16 @@ function App() {
       firstPageButton.current.disabled = false;
     }
 
-    displayProducts(limit, offset, maxSize);
-  }, [limit, offset]);
+  }, [page]);
 
   function goToPage(page){
-    let offset = (page - 1)*limit;
-
-    if(!page || page <= 0){
-      offset = 0;
+    if(!page || page < 1){
+      page = 1;
     }else if(page > totalPages){
-      offset = (totalPages - 1)*limit
+      page = totalPages
     };
 
-    setOffset(offset);
+    setPage(page);
   }
 
   function goToFirstPage(){
@@ -166,11 +170,11 @@ function App() {
   }
 
   function goToNextPage(){
-    goToPage(pageNum + 1);
+    goToPage(page + 1);
   }
 
   function goToPreviousPage(){
-    goToPage(pageNum - 1);
+    goToPage(page - 1);
   }
 
   function goToWrittenPage(event){
@@ -198,54 +202,31 @@ function App() {
         <span>
           Page{' '}
           <strong>
-            {pageNum} of {totalPages}
+            {page} of {totalPages}
           </strong>{' '}
         </span>
         <span>
           | Go to page:{' '}
           <input
             type="number"
-            defaultValue={pageNum}
+            defaultValue={page}
             onChange={goToWrittenPage}
             style={{ width: '100px' }}
           />
         </span>{' '}
-        {/*<select
+        <select
           value={pageSize}
           onChange={e => {
+            setPage(Math.floor(offset/Number(e.target.value)) + 1);
             setPageSize(Number(e.target.value))
           }}
         >
-          {[10, 20, 30, 40, 50].map(pageSize => (
+          {[10, 20, 50, 100].map(pageSize => (
             <option key={pageSize} value={pageSize}>
               Show {pageSize}
             </option>
           ))}
-          </select>*/}
-        {/*<select
-        <span>
-          | Go to page:{' '}
-          <input
-            type="number"
-            defaultValue={pageIndex + 1}
-            onChange={e => {
-              const page = e.target.value ? Number(e.target.value) - 1 : 0
-              gotoPage(page)
-            }}
-            style={{ width: '100px' }}
-          />
-        </span>{' '}
-          value={pageSize}
-          onChange={e => {
-            setPageSize(Number(e.target.value))
-          }}
-        >
-          {[10, 20, 30, 40, 50].map(pageSize => (
-            <option key={pageSize} value={pageSize}>
-              Show {pageSize}
-            </option>
-          ))}
-          </select>*/}
+          </select>
       </div>
     </Styles>
   )
