@@ -88,8 +88,10 @@ function App() {
   const [pageNum, setPageNum] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
-  const previousButton = useRef();
-  const nextButton = useRef();
+  const firstPageButton = useRef();
+  const previousPageButton = useRef();
+  const nextPageButton = useRef();
+  const lastPageButton = useRef();
 
   const [hasReceivedData, setHasReceivedData] = useState(true);
 
@@ -122,22 +124,34 @@ function App() {
 
   useEffect(() => {
     if(offset + limit >= maxSize){
-      nextButton.current.disabled = true;
+      nextPageButton.current.disabled = true;
+      lastPageButton.current.disabled = true;
     }else{
-      nextButton.current.disabled = false;
+      nextPageButton.current.disabled = false;
+      lastPageButton.current.disabled = false;
     }
 
   }, [limit, offset, maxSize]);
 
   useEffect(() => {
     if(offset === 0){
-      previousButton.current.disabled = true;
+      previousPageButton.current.disabled = true;
+      firstPageButton.current.disabled = true;
     }else{
-      previousButton.current.disabled = false;
+      previousPageButton.current.disabled = false;
+      firstPageButton.current.disabled = false;
     }
 
     displayProducts(limit, offset, maxSize);
   }, [limit, offset]);
+
+  function firstPage(){
+    setOffset(0);
+  }
+
+  function lastPage(){
+    setOffset((maxSize > 0) ? (Math.ceil(maxSize/limit) - 1)*limit : 0);
+  }
 
   function nextPage(){
     setOffset(offset + limit);
@@ -151,16 +165,16 @@ function App() {
     <Styles>
       <Table columns={columns} data={products} />
       <div className="pagination" hidden={hasReceivedData}>
-        <button>
+        <button onClick={() => firstPage()} ref={firstPageButton}>
           {'<<'}
         </button>{' '}
-        <button onClick={() => previousPage()} ref={previousButton}>
+        <button onClick={() => previousPage()} ref={previousPageButton}>
             {'<'}
           </button>{' '}
-        <button onClick={() => nextPage()} ref={nextButton}>
+        <button onClick={() => nextPage()} ref={nextPageButton}>
           {'>'}
         </button>{' '}
-        <button>
+        <button onClick={() => lastPage()} ref={lastPageButton}>
           {'>>'}
         </button>{' '}
         <span>
