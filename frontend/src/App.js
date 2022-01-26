@@ -145,36 +145,54 @@ function App() {
     displayProducts(limit, offset, maxSize);
   }, [limit, offset]);
 
-  function firstPage(){
-    setOffset(0);
+  function goToPage(page){
+    let offset = (page - 1)*limit;
+
+    if(!page || page <= 0){
+      offset = 0;
+    }else if(page > totalPages){
+      offset = (totalPages - 1)*limit
+    };
+
+    setOffset(offset);
   }
 
-  function lastPage(){
-    setOffset((maxSize > 0) ? (Math.ceil(maxSize/limit) - 1)*limit : 0);
+  function goToFirstPage(){
+    goToPage(1);
   }
 
-  function nextPage(){
-    setOffset(offset + limit);
+  function goToLastPage(){
+    goToPage(totalPages);
   }
 
-  function previousPage(){
-    setOffset(offset - limit);
+  function goToNextPage(){
+    goToPage(pageNum + 1);
+  }
+
+  function goToPreviousPage(){
+    goToPage(pageNum - 1);
+  }
+
+  function goToWrittenPage(event){
+    const page = event.target.value;
+
+    goToPage(page);
   }
 
   return (
     <Styles>
       <Table columns={columns} data={products} />
       <div className="pagination" hidden={hasReceivedData}>
-        <button onClick={() => firstPage()} ref={firstPageButton}>
+        <button onClick={goToFirstPage} ref={firstPageButton}>
           {'<<'}
         </button>{' '}
-        <button onClick={() => previousPage()} ref={previousPageButton}>
+        <button onClick={goToPreviousPage} ref={previousPageButton}>
             {'<'}
           </button>{' '}
-        <button onClick={() => nextPage()} ref={nextPageButton}>
+        <button onClick={goToNextPage} ref={nextPageButton}>
           {'>'}
         </button>{' '}
-        <button onClick={() => lastPage()} ref={lastPageButton}>
+        <button onClick={goToLastPage} ref={lastPageButton}>
           {'>>'}
         </button>{' '}
         <span>
@@ -183,6 +201,27 @@ function App() {
             {pageNum} of {totalPages}
           </strong>{' '}
         </span>
+        <span>
+          | Go to page:{' '}
+          <input
+            type="number"
+            defaultValue={pageNum}
+            onChange={goToWrittenPage}
+            style={{ width: '100px' }}
+          />
+        </span>{' '}
+        {/*<select
+          value={pageSize}
+          onChange={e => {
+            setPageSize(Number(e.target.value))
+          }}
+        >
+          {[10, 20, 30, 40, 50].map(pageSize => (
+            <option key={pageSize} value={pageSize}>
+              Show {pageSize}
+            </option>
+          ))}
+          </select>*/}
         {/*<select
         <span>
           | Go to page:{' '}
