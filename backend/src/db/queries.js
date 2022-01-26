@@ -114,7 +114,8 @@ async function updateDBWithScrapedProducts(products, urlsNoAttributes){
 
             const {productsInDB, productsNotInDB} = await getProductsInDB(products)
 
-            console.log(Object.keys(productsInDB).length, Object.keys(productsNotInDB).length);
+            console.log('# of existing products being scraped:', Object.keys(productsInDB).length);
+            console.log('# of new products being scraped:', Object.keys(productsNotInDB).length); 
 
             const {idReviewToUpdate, idReviewToInsert, idProdToUpdate} = await fillReviews(productsInDB, productsNotInDB);
 

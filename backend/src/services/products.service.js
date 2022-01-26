@@ -231,9 +231,9 @@ function canFilterProduct(product, filters){
 }
 
 // request = {attributesToDisplay: string[], attributesToSort: string[], order: string[], filters: [string[], ...]}
-async function getProductsForDisplay(request, limit = 20, skip = 0){
+async function getProductsForDisplay(request, limit = 10, offset = 0){
     limit = clip(limit, 0, process.env.MAX_ITEMS_PER_PAGE);
-    skip = (skip < 0) ? 0 : skip;
+    offset = (offset < 0) ? 0 : offset;
 
     const {attributesToDisplay, attributesToSort, order, filters} = request;
 
@@ -246,7 +246,12 @@ async function getProductsForDisplay(request, limit = 20, skip = 0){
     .then(prods => prods.map((product) => correctProdAttr(product)))
     .then(prods => prods.filter(product => canFilterProduct(product, filters)))
     .then(prods => sortProducts(prods, attributesToSort, order))
-    .then(prods => prods.slice(skip, skip + limit))
+    .then(prods => {
+        return {
+            maxSize: prods.length,
+            data: prods.slice(offset, offset + limit)
+        }
+    })
     .catch(error => {
         throw(error);
     });

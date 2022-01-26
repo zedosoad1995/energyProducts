@@ -153,7 +153,6 @@ async function getWortenProducts(url, urlsWithAttributes){
         if(productsInfo['offset']['max'] >= productsInfo['offsetMax'])
             lastPage = true;
 
-        console.log(pageNum);
         pageNum++;
     }
 

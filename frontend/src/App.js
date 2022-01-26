@@ -80,16 +80,24 @@ function Table({ columns, data }) {
 function App() {
   const [products, setProducts] = useState([]);
   const [columns, setColumns] = useState([]);
-  const [skip, setSkip] = useState(0);
+
+  const [offset, setOffset] = useState(0);
   const [limit, setLimit] = useState(10);
+  const [maxSize, setMaxSize] = useState(0);
+
   const previousButton = useRef();
+  const nextButton = useRef();
+
   const [hasReceivedData, setHasReceivedData] = useState(true);
 
-  function displayProducts(limit, skip){
-    getProducts(limit, skip)
-    .then(({products, columns}) => {
+  function displayProducts(limit, offset){
+    getProducts(limit, offset)
+    .then(({products, columns, maxSize}) => {
+
       setProducts(products);
       setColumns(columns);
+      setMaxSize(maxSize);
+
       if(columns.length > 0){
         setHasReceivedData(false);
       }
@@ -100,21 +108,30 @@ function App() {
   }
 
   useEffect(() => {
-    if(skip === 0){
+    if(offset + limit >= maxSize){
+      nextButton.current.disabled = true;
+    }else{
+      nextButton.current.disabled = false;
+    }
+
+  }, [limit, offset, maxSize]);
+
+  useEffect(() => {
+    if(offset === 0){
       previousButton.current.disabled = true;
     }else{
       previousButton.current.disabled = false;
     }
 
-    displayProducts(limit, skip);
-  }, [limit, skip]);
+    displayProducts(limit, offset, maxSize);
+  }, [limit, offset]);
 
   function nextPage(){
-    setSkip(skip + limit);
+    setOffset(offset + limit);
   }
 
   function previousPage(){
-    setSkip(skip - limit);
+    setOffset(offset - limit);
   }
 
   return (
@@ -124,7 +141,7 @@ function App() {
         <button onClick={() => previousPage()} ref={previousButton}>
             {'<'}
           </button>{' '}
-        <button onClick={() => nextPage()}>
+        <button onClick={() => nextPage()} ref={nextButton}>
           {'>'}
         </button>{' '}
       </div>

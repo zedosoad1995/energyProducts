@@ -8,7 +8,3 @@ INSERT IGNORE INTO
 VALUES 
     ('Esquentador', '/grandes-eletrodomesticos/aquecimento-de-agua/esquentadores', 1),
     ('Termoacumulador', '/grandes-eletrodomesticos/aquecimento-de-agua/termoacumuladores', 1);
-
-
-
-
