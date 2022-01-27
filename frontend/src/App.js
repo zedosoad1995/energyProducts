@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useTable, usePagination } from 'react-table';
+import { useTable, usePagination, useSortBy } from 'react-table';
 import styled from 'styled-components';
 import { getProducts, getAttrNames } from './services/product.service';
 
@@ -63,8 +63,11 @@ function Table({ columns, data }) {
       data,
       initialState: { pageIndex: 0 },
     },
-    usePagination
+    useSortBy
   )
+
+  const [orderCols, setOrderCols] = useState([]);
+  const [cnt, setCnt] = useState(0);
 
   const IndeterminateCheckbox = React.forwardRef(
     ({ indeterminate, ...rest }, ref) => {
@@ -78,6 +81,35 @@ function Table({ columns, data }) {
       return <input type="checkbox" ref={resolvedRef} {...rest} />
     }
   )
+
+  function changeColumnOrder(event, column){
+    // event.currentTarget.getAttribute('name')
+    //console.log(event.currentTarget.getAttribute('idx'));
+    //setOrderCols(Array(allColumns.length).fill({isSorted: false, isSortedDesc: false}))
+    const idx = event.currentTarget.getAttribute('idx');
+
+    let currOrder;
+    if(orderCols.length === 0){
+      currOrder = Array.from({length: allColumns.length}, e => {return {isSorted: false, isSortedDesc: false}})
+      //currOrder = Array(allColumns.length).fill({isSorted: false, isSortedDesc: false});
+    }else{
+      currOrder = orderCols;
+    }
+    currOrder[idx]['isSorted'] = !currOrder[idx]['isSorted'];
+    //console.log(currOrder)
+    setOrderCols(currOrder);
+    setCnt(cnt + 1);
+    //console.log('clicked', event.currentTarget, allColumns.filter(val => val['Header'] === event.currentTarget.getAttribute('name')));
+    //allColumns.filter(val => val['Header'] === event.currentTarget.getAttribute('name'))[0].isSorted = true;
+  }
+
+  useEffect(() => {
+    //console.log(cnt);
+  }, [cnt]);
+
+  useEffect(() => {
+    console.log('yo');
+  });
 
   // Render the UI for your table
   return (
@@ -101,8 +133,17 @@ function Table({ columns, data }) {
         <thead>
           {headerGroups.map(headerGroup => (
             <tr {...headerGroup.getHeaderGroupProps()}>
-              {headerGroup.headers.map(column => (
-                <th {...column.getHeaderProps()}>{column.render('Header')}</th>
+              {headerGroup.headers.map((column, i) => (
+                <th onClick={(event) => changeColumnOrder(event, column)} idx={i} {...column.getHeaderProps()} name={column['Header']}>
+                  {column.render('Header')}
+                  <span>
+                    {(orderCols.length > 0 && orderCols.length - 1 >= i && orderCols[i]['isSorted'])
+                      ? true
+                        ? ' 🔽'
+                        : ' 🔼'
+                      : ''}
+                  </span>
+                </th>
               ))}
             </tr>
           ))}
@@ -245,7 +286,7 @@ function App(){
   function handleCheckboxChange(event){
     if(!('attributesToDisplay' in request)) return;
 
-    const selectedAttr = event.currentTarget.dataset.value; 
+    const selectedAttr = event.currentTarget.getAttribute('data-value');
 
     if(event.target.checked){
       if(!(selectedAttr in request['attributesToDisplay'])){
