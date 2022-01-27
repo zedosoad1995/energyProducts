@@ -3,6 +3,16 @@ import { useTable, usePagination } from 'react-table';
 import styled from 'styled-components';
 import { getProducts } from './services/product.service';
 
+import Checkbox from "@material-ui/core/Checkbox";
+import InputLabel from "@material-ui/core/InputLabel";
+import ListItemIcon from "@material-ui/core/ListItemIcon";
+import ListItemText from "@material-ui/core/ListItemText";
+import MenuItem from "@material-ui/core/MenuItem";
+import FormControl from "@material-ui/core/FormControl";
+import Select from "@material-ui/core/Select";
+
+import { MenuProps, useStyles, options } from "./utils";
+
 const Styles = styled.div`
   padding: 1rem;
   table {
@@ -115,7 +125,10 @@ function Table({ columns, data }) {
   )
 }
 
-function App() {
+function App(){
+  const classes = useStyles();
+  const [selected, setSelected] = useState([]);
+
   const [products, setProducts] = useState([]);
   const [columns, setColumns] = useState([]);
 
@@ -215,8 +228,33 @@ function App() {
     goToPage(Number(page));
   }
 
+  function handleChange(event){
+    const value = event.target.value;
+    setSelected(value);
+  };
+
   return (
     <Styles>
+      <FormControl className={classes.formControl}>
+        <InputLabel id="mutiple-select-label">Multiple Select</InputLabel>
+        <Select
+          labelId="mutiple-select-label"
+          multiple
+          value={selected}
+          onChange={handleChange}
+          renderValue={(selected) => selected.join(", ")}
+          MenuProps={MenuProps}
+        >
+          {options.map((option) => (
+            <MenuItem key={option} value={option}>
+              <ListItemIcon>
+                <Checkbox checked={selected.indexOf(option) > -1} />
+              </ListItemIcon>
+              <ListItemText primary={option} />
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
       <Table columns={columns} data={products} />
       <div className="pagination" hidden={!hasReceivedData}>
         <button onClick={goToFirstPage} ref={firstPageButton}>
