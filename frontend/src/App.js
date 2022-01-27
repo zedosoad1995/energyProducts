@@ -130,6 +130,10 @@ function App(){
   const [selected, setSelected] = useState([]);
   const [attrNames, setAttrNames] = useState([]);
 
+  const [request, setRequest] = useState({
+    attributesToDisplay: ['distributor', 'category', 'Altura', 'rating', 'numReviews', 'Peso']
+  });
+
   const [products, setProducts] = useState([]);
   const [columns, setColumns] = useState([]);
 
@@ -146,12 +150,12 @@ function App(){
 
   const [hasReceivedData, setHasReceivedData] = useState(false);
 
-  function displayProducts(page, pageSize){
+  function displayProducts(request, page, pageSize){
 
     const offsetVal = (page - 1)*pageSize;
     setOffset(offsetVal);
 
-    getProducts(pageSize, offsetVal)
+    getProducts(request, pageSize, offsetVal)
     .then(({products, columns, maxSize}) => {
 
       setProducts(products);
@@ -191,7 +195,7 @@ function App(){
   }, [page, totalPages])
 
   useEffect(() => {
-    displayProducts(page, pageSize);
+    displayProducts(request, page, pageSize);
     getAttrNames()
     .then(names => {
       setAttrNames(names.data);
@@ -207,7 +211,7 @@ function App(){
     };
 
     if(newPage !== page){
-      displayProducts(newPage, pageSize);
+      displayProducts(request, newPage, pageSize);
     }
   }
 
@@ -236,6 +240,12 @@ function App(){
   function handleChange(event){
     const value = event.target.value;
     setSelected(value);
+
+    const newRequest = {...request, attributesToDisplay: request['attributesToDisplay'].concat(value)};
+    console.log(newRequest);
+
+    setRequest(newRequest);
+    displayProducts(newRequest, page, pageSize);
   };
 
   return (
