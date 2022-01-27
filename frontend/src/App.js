@@ -87,17 +87,15 @@ function App() {
 
   const [pageSize, setPageSize] = useState(10);
   const [offset, setOffset] = useState(0);
-  const [maxSize, setMaxSize] = useState(0);
 
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
+  const [statesToDisplay, setStatesToDisplay] = useState({page: 1});
 
   const firstPageButton = useRef();
   const previousPageButton = useRef();
   const nextPageButton = useRef();
   const lastPageButton = useRef();
 
-  const [hasReceivedData, setHasReceivedData] = useState(true);
+  const [hasReceivedData, setHasReceivedData] = useState(false);
 
   function displayProducts(page, pageSize){
 
@@ -109,11 +107,34 @@ function App() {
 
       setProducts(products);
       setColumns(columns);
-      setMaxSize(maxSize);
 
       if(columns.length > 0){
-        setHasReceivedData(false);
+        setHasReceivedData(true);
       }
+
+      const totalPages = (maxSize > 0) ? Math.ceil(maxSize/pageSize) : 0;
+
+      if(page === 1){
+        previousPageButton.current.disabled = true;
+        firstPageButton.current.disabled = true;
+      }else{
+        previousPageButton.current.disabled = false;
+        firstPageButton.current.disabled = false;
+      }
+
+      if(page >= totalPages){
+        nextPageButton.current.disabled = true;
+        lastPageButton.current.disabled = true;
+      }else{
+        nextPageButton.current.disabled = false;
+        lastPageButton.current.disabled = false;
+      }
+
+      setStatesToDisplay({
+        ...statesToDisplay,
+        page,
+        totalPages,
+      })
     })
     .catch(error => {
       console.log(error);
@@ -121,44 +142,20 @@ function App() {
   }
 
   useEffect(() => {
-    displayProducts(page, pageSize);
-  }, [page, pageSize]);
-
-  useEffect(() => {
-    const totalPages = (maxSize > 0) ? Math.ceil(maxSize/pageSize) : 0;
-    setTotalPages(totalPages);
-  }, [pageSize, maxSize]);
-
-  useEffect(() => {
-    if(page >= totalPages){
-      nextPageButton.current.disabled = true;
-      lastPageButton.current.disabled = true;
-    }else{
-      nextPageButton.current.disabled = false;
-      lastPageButton.current.disabled = false;
-    }
-
-  }, [page, totalPages]);
-
-  useEffect(() => {
-    if(page === 1){
-      previousPageButton.current.disabled = true;
-      firstPageButton.current.disabled = true;
-    }else{
-      previousPageButton.current.disabled = false;
-      firstPageButton.current.disabled = false;
-    }
-
-  }, [page]);
+    displayProducts(statesToDisplay.page, pageSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function goToPage(page){
     if(!page || page < 1){
       page = 1;
-    }else if(page > totalPages){
-      page = totalPages
+    }else if(page > statesToDisplay.totalPages){
+      page = statesToDisplay.totalPages
     };
 
-    setPage(page);
+    if(page !== statesToDisplay.page){
+      displayProducts(page, pageSize);
+    }
   }
 
   function goToFirstPage(){
@@ -166,15 +163,15 @@ function App() {
   }
 
   function goToLastPage(){
-    goToPage(totalPages);
+    goToPage(statesToDisplay.totalPages);
   }
 
   function goToNextPage(){
-    goToPage(page + 1);
+    goToPage(statesToDisplay.page + 1);
   }
 
   function goToPreviousPage(){
-    goToPage(page - 1);
+    goToPage(statesToDisplay.page - 1);
   }
 
   function goToWrittenPage(event){
@@ -186,7 +183,7 @@ function App() {
   return (
     <Styles>
       <Table columns={columns} data={products} />
-      <div className="pagination" hidden={hasReceivedData}>
+      <div className="pagination" hidden={!hasReceivedData}>
         <button onClick={goToFirstPage} ref={firstPageButton}>
           {'<<'}
         </button>{' '}
@@ -202,14 +199,14 @@ function App() {
         <span>
           Page{' '}
           <strong>
-            {page} of {totalPages}
+            {statesToDisplay.page} of {statesToDisplay.totalPages}
           </strong>{' '}
         </span>
         <span>
           | Go to page:{' '}
           <input
             type="number"
-            defaultValue={page}
+            defaultValue={statesToDisplay.page}
             onChange={goToWrittenPage}
             style={{ width: '100px' }}
           />
@@ -217,8 +214,10 @@ function App() {
         <select
           value={pageSize}
           onChange={e => {
-            setPage(Math.floor(offset/Number(e.target.value)) + 1);
-            setPageSize(Number(e.target.value))
+            const page = Math.floor(offset/Number(e.target.value)) + 1;
+            const pageSize = Number(e.target.value);
+            setPageSize(pageSize);
+            displayProducts(page, pageSize);
           }}
         >
           {[10, 20, 50, 100].map(pageSize => (
