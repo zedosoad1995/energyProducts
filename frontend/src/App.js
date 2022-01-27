@@ -240,13 +240,28 @@ function App(){
   function handleChange(event){
     const value = event.target.value;
     setSelected(value);
-
-    const newRequest = {...request, attributesToDisplay: request['attributesToDisplay'].concat(value)};
-    console.log(newRequest);
-
-    setRequest(newRequest);
-    displayProducts(newRequest, page, pageSize);
   };
+
+  function handleCheckboxChange(event){
+    if(!('attributesToDisplay' in request)) return;
+
+    const selectedAttr = event.currentTarget.dataset.value; 
+
+    if(event.target.checked){
+      if(!(selectedAttr in request['attributesToDisplay'])){
+        request['attributesToDisplay'].push(selectedAttr);
+        setRequest(request);
+        displayProducts(request, page, pageSize);
+      }
+    }else{
+      let index = request['attributesToDisplay'].indexOf(selectedAttr);
+      if (index !== -1) {
+        request['attributesToDisplay'].splice(index, 1);
+        setRequest(request);
+        displayProducts(request, page, pageSize);
+      }
+    }
+  }
 
   return (
     <Styles>
@@ -261,7 +276,7 @@ function App(){
           MenuProps={MenuProps}
         >
           {attrNames.map((option) => (
-            <MenuItem key={option} value={option}>
+            <MenuItem onChange={handleCheckboxChange} key={option} value={option}>
               <ListItemIcon>
                 <Checkbox checked={selected.indexOf(option) > -1} />
               </ListItemIcon>
