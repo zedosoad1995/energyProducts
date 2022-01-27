@@ -13,3 +13,7 @@ export async function getProducts(limit, offset){
 
     return {products, columns, maxSize};
 }
+
+export async function getAttrNames(limit, offset){
+    return axios.get(`http://localhost:8000/api/productAttrNames`);
+}

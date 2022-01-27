@@ -1,5 +1,5 @@
 const { getWortenProducts } = require('../services/scrape/worten.service');
-const { getProductsForDisplay } = require('../services/products.service');
+const { getProductsForDisplay, getProductAttrNames } = require('../services/products.service');
 const Promise = require("bluebird");
 const {getProductCatalogUrls, updateDBWithScrapedProducts, getProductUrlsInDB} = require('../db/queries');
 const {getHeader} = require('../services/utils/dataManipulation');
@@ -57,7 +57,22 @@ async function getProducts(req, res, next){
     });
 }
 
+async function getAllAttrNames(req, res, next){
+    await getProductAttrNames()
+    .then(names => {
+        // Por estes nomes de uma forma centralizada, talvez no service (business logic)
+        const otherNames = ['distributor', 'category', 'rating', 'numReviews', 'price', 'url', 'marca'];
+        names = names.concat(...otherNames);
+        res.status(200).send(names);
+    })
+    .catch(error => {
+        console.error(error);
+        res.status(400).send('Bad Request');
+    });
+}
+
 module.exports = {
     wortenScraper,
-    getProducts
+    getProducts,
+    getAllAttrNames
 }

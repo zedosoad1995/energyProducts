@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTable, usePagination } from 'react-table';
 import styled from 'styled-components';
-import { getProducts } from './services/product.service';
+import { getProducts, getAttrNames } from './services/product.service';
 
 import Checkbox from "@material-ui/core/Checkbox";
 import InputLabel from "@material-ui/core/InputLabel";
@@ -11,7 +11,7 @@ import MenuItem from "@material-ui/core/MenuItem";
 import FormControl from "@material-ui/core/FormControl";
 import Select from "@material-ui/core/Select";
 
-import { MenuProps, useStyles, options } from "./utils";
+import { MenuProps, useStyles } from "./utils";
 
 const Styles = styled.div`
   padding: 1rem;
@@ -128,6 +128,7 @@ function Table({ columns, data }) {
 function App(){
   const classes = useStyles();
   const [selected, setSelected] = useState([]);
+  const [attrNames, setAttrNames] = useState([]);
 
   const [products, setProducts] = useState([]);
   const [columns, setColumns] = useState([]);
@@ -191,6 +192,10 @@ function App(){
 
   useEffect(() => {
     displayProducts(page, pageSize);
+    getAttrNames()
+    .then(names => {
+      setAttrNames(names.data);
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -245,7 +250,7 @@ function App(){
           renderValue={(selected) => selected.join(", ")}
           MenuProps={MenuProps}
         >
-          {options.map((option) => (
+          {attrNames.map((option) => (
             <MenuItem key={option} value={option}>
               <ListItemIcon>
                 <Checkbox checked={selected.indexOf(option) > -1} />

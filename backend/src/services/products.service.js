@@ -7,7 +7,7 @@ require('dotenv').config();
 const dbQuery = util.promisify(db.query).bind(db);
 
 async function hasInvalidAttributeNames(attributesToDisplay, invalidAttributeNames){
-    const allAttributeNames = await getProductAttributeNames();
+    const allAttributeNames = await getProductAttrNames();
 
     attributesToDisplay.forEach(attr => {
         if(!allAttributeNames.includes(attr)){
@@ -75,7 +75,7 @@ function getJoinTemplateStr(attribute, idx){
             ON pa${idx}.productID = products.id`;
 }
 
-async function getProductAttributeNames(){
+async function getProductAttrNames(){
     const query = `
         SELECT DISTINCT attributeName
         FROM productAttributes;`;
@@ -88,7 +88,7 @@ async function getProductAttributeNames(){
 }
 
 async function getProdAttrQueryParts(attributesToDisplay){
-    const validAttr = await getProductAttributeNames();
+    const validAttr = await getProductAttrNames();
 
     let {prodAttrJoins, prodAttrSelects} = await attributesToDisplay.reduce(async (obj, attribute, i) => {   
         await obj.then(async (res) => {
@@ -258,5 +258,6 @@ async function getProductsForDisplay(request, limit = 10, offset = 0){
 }
 
 module.exports = {
-    getProductsForDisplay
+    getProductsForDisplay,
+    getProductAttrNames
 }
