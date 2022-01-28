@@ -1,4 +1,5 @@
 import { makeStyles } from "@material-ui/core/styles";
+import { useRef, useEffect } from 'react';
 
 const useStyles = makeStyles((theme) => ({
   formControl: {
@@ -40,17 +41,18 @@ const MenuProps = {
   variant: "menu"
 };
 
-const options = [
-  "Oliver Hansen",
-  "Van Henry",
-  "April Tucker",
-  "Ralph Hubbard",
-  "Omar Alexander",
-  "Carlos Abbott",
-  "Miriam Wagner",
-  "Bradley Wilkerson",
-  "Virginia Andrews",
-  "Kelly Snyder"
-];
+function getColumnNames(columns, columnNames = []){
+  for(let i = 0; i < columns.length; i++){
+      const obj = columns[i];
 
-export { useStyles, MenuProps, options };
+      if('columns' in obj){
+          getColumnNames(obj['columns'], columnNames);
+      }else if('accessor' in obj){
+          columnNames.push(obj['accessor']);
+      }
+  }
+
+  return columnNames;
+}
+
+export { useStyles, MenuProps, getColumnNames };

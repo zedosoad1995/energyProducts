@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, forwardRef } from 'react';
 import { useTable, usePagination, useSortBy } from 'react-table';
 import styled from 'styled-components';
 import { getProducts, getAttrNames } from './services/product.service';
+import _ from 'lodash';
 
 import Checkbox from "@material-ui/core/Checkbox";
 import InputLabel from "@material-ui/core/InputLabel";
@@ -11,7 +12,7 @@ import MenuItem from "@material-ui/core/MenuItem";
 import FormControl from "@material-ui/core/FormControl";
 import Select from "@material-ui/core/Select";
 
-import { MenuProps, useStyles } from "./utils";
+import { MenuProps, useStyles, getColumnNames } from "./utils";
 
 const Styles = styled.div`
   padding: 1rem;
@@ -47,7 +48,7 @@ const Styles = styled.div`
 `
 
 
-function Table({ columns, data }) {
+const Table = ({ columns, data, changeOrder }) => {
   // Use the state and functions returned from useTable to build your UI
   const {
     getTableProps,
@@ -66,8 +67,9 @@ function Table({ columns, data }) {
     useSortBy
   )
 
-  const [orderCols, setOrderCols] = useState([]);
-  const [cnt, setCnt] = useState(0);
+  const [orderCols, setOrderCols] = useState({});
+
+  const [columnsState, setColumnsState] = useState(columns);
 
   const IndeterminateCheckbox = React.forwardRef(
     ({ indeterminate, ...rest }, ref) => {
@@ -83,32 +85,54 @@ function Table({ columns, data }) {
   )
 
   function changeColumnOrder(event, column){
-    // event.currentTarget.getAttribute('name')
-    //console.log(event.currentTarget.getAttribute('idx'));
-    //setOrderCols(Array(allColumns.length).fill({isSorted: false, isSortedDesc: false}))
-    const idx = event.currentTarget.getAttribute('idx');
+    const key = event.currentTarget.getAttribute('name');
 
-    let currOrder;
-    if(orderCols.length === 0){
-      currOrder = Array.from({length: allColumns.length}, e => {return {isSorted: false, isSortedDesc: false}})
-      //currOrder = Array(allColumns.length).fill({isSorted: false, isSortedDesc: false});
+    let currOrder = {...orderCols};
+    if(!currOrder[key]['isSorted']){
+      currOrder[key]['isSorted'] = !currOrder[key]['isSorted'];
+
+      changeOrder(key, 'ASC');
+
+    }else if(!currOrder[key]['isSortedDesc']){
+      currOrder[key]['isSortedDesc'] = !currOrder[key]['isSortedDesc'];
+
+      changeOrder(key, 'DESC');
+
     }else{
-      currOrder = orderCols;
+      currOrder[key]['isSorted'] = false
+      currOrder[key]['isSortedDesc'] = false
+
+      changeOrder(key);
     }
-    currOrder[idx]['isSorted'] = !currOrder[idx]['isSorted'];
-    //console.log(currOrder)
+
     setOrderCols(currOrder);
-    setCnt(cnt + 1);
-    //console.log('clicked', event.currentTarget, allColumns.filter(val => val['Header'] === event.currentTarget.getAttribute('name')));
-    //allColumns.filter(val => val['Header'] === event.currentTarget.getAttribute('name'))[0].isSorted = true;
   }
 
   useEffect(() => {
-    //console.log(cnt);
-  }, [cnt]);
+    const columnNames = getColumnNames(columns, []);
+    
+    let updatedOrderCols = {...orderCols};
+
+    columnNames.forEach(newCol => {
+      if(!(newCol in updatedOrderCols)){
+        updatedOrderCols[newCol] = {isSorted: false, isSortedDesc: false};
+      }
+    });
+
+    Object.keys(orderCols).forEach(prevCol => {
+      if(!columnNames.includes(prevCol)){
+        delete updatedOrderCols[prevCol];
+      }
+    })
+
+    console.log(updatedOrderCols);
+    setOrderCols(updatedOrderCols);
+  }, [columnsState]);
 
   useEffect(() => {
-    console.log('yo');
+    if(!_.isEqual(columnsState, columns)){
+      setColumnsState(columns);
+    }
   });
 
   // Render the UI for your table
@@ -135,10 +159,11 @@ function Table({ columns, data }) {
             <tr {...headerGroup.getHeaderGroupProps()}>
               {headerGroup.headers.map((column, i) => (
                 <th onClick={(event) => changeColumnOrder(event, column)} idx={i} {...column.getHeaderProps()} name={column['Header']}>
-                  {column.render('Header')}
+                  {column.render('Header')}       
                   <span>
-                    {(orderCols.length > 0 && orderCols.length - 1 >= i && orderCols[i]['isSorted'])
-                      ? true
+                    {(column['Header'] in orderCols && 'isSorted' in orderCols[column['Header']] 
+                    && orderCols[column['Header']]['isSorted'])
+                      ? orderCols[column['Header']]['isSortedDesc']
                         ? ' 🔽'
                         : ' 🔼'
                       : ''}
@@ -164,7 +189,7 @@ function Table({ columns, data }) {
     </>
     
   )
-}
+};
 
 function App(){
   const classes = useStyles();
@@ -172,7 +197,9 @@ function App(){
   const [attrNames, setAttrNames] = useState([]);
 
   const [request, setRequest] = useState({
-    attributesToDisplay: ['distributor', 'category', 'Altura', 'rating', 'numReviews', 'Peso']
+    attributesToDisplay: ['distributor', 'category', 'Altura', 'rating', 'numReviews', 'Peso'],
+    attributesToSort: [],
+    order: []
   });
 
   const [products, setProducts] = useState([]);
@@ -190,6 +217,29 @@ function App(){
   const lastPageButton = useRef();
 
   const [hasReceivedData, setHasReceivedData] = useState(false);
+
+  function changeOrder(attr, order){
+    let newRequest = request;
+
+    if(order === 'ASC'){
+      newRequest.attributesToSort.push(attr);
+      newRequest.order.push('ASC');
+
+    }else if(order === 'DESC'){
+      const idx = newRequest.attributesToSort.indexOf(attr);
+      newRequest.order[idx] = 'DESC';
+
+    }else{
+      const idx = newRequest.attributesToSort.indexOf(attr);
+      newRequest.attributesToSort.splice(idx, 1);
+      newRequest.order.splice(idx, 1);
+    }
+
+    console.log('new request', newRequest);
+
+    setRequest(newRequest);
+    displayProducts(newRequest, page, pageSize)
+  }
 
   function displayProducts(request, page, pageSize){
 
@@ -240,9 +290,13 @@ function App(){
     getAttrNames()
     .then(names => {
       setAttrNames(names.data);
-    })
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    console.log('hey')
+  });
 
   function goToPage(newPage){
     if(!newPage || newPage < 1){
@@ -326,7 +380,7 @@ function App(){
           ))}
         </Select>
       </FormControl>
-      <Table columns={columns} data={products} />
+      <Table columns={columns} data={products} changeOrder={changeOrder}/>
       <div className="pagination" hidden={!hasReceivedData}>
         <button onClick={goToFirstPage} ref={firstPageButton}>
           {'<<'}
@@ -360,7 +414,7 @@ function App(){
           onChange={e => {
             const page = Math.floor(offset/Number(e.target.value)) + 1;
             const pageSize = Number(e.target.value);  
-            displayProducts(page, pageSize);
+            displayProducts(request, page, pageSize);
           }}
         >
           {[10, 20, 50, 100].map(pageSize => (
