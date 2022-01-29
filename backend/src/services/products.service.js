@@ -43,22 +43,25 @@ async function errorHandling_getProductsToDisplay(attributesToDisplay, attribute
         throw new Error(`'attributesToDisplay' contains attributes that to not exist in the DB: ${invalidAttributeNames.join(', ')}`);*/
 }
 
-async function getDatatype(attribute){
+async function getDatatype(attributes){
     const query = `
-        SELECT datatype
+        SELECT DISTINCT attributeName, datatype
         FROM productAttributes
-        WHERE attributeName = '${attribute}'
-        LIMIT 1;`;
+        WHERE attributeName IN ('${attributes.join(`', '`)}');`;
 
     return dbQuery(query)
-            .then(row => row[0]['datatype'])
+            .then(rows => rows.reduce((obj, row) => {
+                obj[row['attributeName']] = row['datatype'];
+                return obj;
+            }, {}))
             .catch(error => {
                 throw(error);
             });
 }
 
 async function getSelectTemplateStr(attribute, idx){
-    const datatype = await getDatatype(attribute);
+    const datatype = await getDatatype([attribute])
+        .then(datatypes => datatypes[attribute]);
 
     const datatypeStr = (datatype === 'Number') ? 'DECIMAL(11, 4)' : 'CHAR'
 
@@ -246,10 +249,13 @@ async function getProductsForDisplay(request, limit = 10, offset = 0){
     .then(prods => prods.map((product) => correctProdAttr(product)))
     .then(prods => prods.filter(product => canFilterProduct(product, filters)))
     .then(prods => sortProducts(prods, attributesToSort, order))
-    .then(prods => {
+    .then(async (prods) => {
+        // TODO: attributeTypes para colunas que não pertençam a table productAttributes
+        // https://dba.stackexchange.com/questions/30141/mysql-metadata-function-to-get-projected-column-type-in-query may have the answer
         return {
             maxSize: prods.length,
-            data: prods.slice(offset, offset + limit)
+            data: prods.slice(offset, offset + limit),
+            attributeTypes: await getDatatype(attributesToDisplay)
         }
     })
     .catch(error => {

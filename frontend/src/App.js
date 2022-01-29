@@ -50,7 +50,7 @@ const Styles = styled.div`
 `
 
 
-const Table = ({ columns, data, changeOrder }) => {
+const Table = ({ columns, data, changeOrder, attributeTypes }) => {
   // Use the state and functions returned from useTable to build your UI
   const {
     getTableProps,
@@ -170,7 +170,8 @@ const Table = ({ columns, data, changeOrder }) => {
                         : ' 🔼'
                       : ''}
                   </span>
-                  <div>{minMaxFilter()}</div>
+                  {/* fazer funcao que retorna os devidos filtros */}
+                  <div>{ (attributeTypes[column['Header']] === 'Number') ? minMaxFilter() : null }</div>
                 </th>
               ))}
             </tr>
@@ -207,6 +208,7 @@ function App(){
 
   const [products, setProducts] = useState([]);
   const [columns, setColumns] = useState([]);
+  const [attributeTypes, setAttributeTypes] = useState([]);
 
   const [pageSize, setPageSize] = useState(10);
   const [offset, setOffset] = useState(0);
@@ -248,10 +250,11 @@ function App(){
     setOffset(offsetVal);
 
     getProducts(request, pageSize, offsetVal)
-    .then(({products, columns, maxSize}) => {
+    .then(({products, columns, maxSize, attributeTypes}) => {
 
       setProducts(products);
       setColumns(columns);
+      setAttributeTypes(attributeTypes);
 
       if(columns.length > 0){
         setHasReceivedData(true);
@@ -381,7 +384,7 @@ function App(){
           ))}
         </Select>
       </FormControl>
-      <Table columns={columns} data={products} changeOrder={changeOrder}/>
+      <Table columns={columns} data={products} changeOrder={changeOrder} attributeTypes={attributeTypes}/>
       <div className="pagination" hidden={!hasReceivedData}>
         <button onClick={goToFirstPage} ref={firstPageButton}>
           {'<<'}

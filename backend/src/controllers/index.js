@@ -46,6 +46,7 @@ async function getProducts(req, res, next){
         res.status(200).json({
             products: prods['data'],
             maxSize: prods['maxSize'],
+            attributeTypes: prods['attributeTypes'],
             header: getHeader(prods['data']),
             limit: limit,
             offset: offset
