@@ -14,6 +14,8 @@ import Select from "@material-ui/core/Select";
 
 import { MenuProps, useStyles, getColumnNames } from "./utils";
 
+import { minMaxFilter } from './productTableComponents/minMaxFilter';
+
 const Styles = styled.div`
   padding: 1rem;
   table {
@@ -168,6 +170,7 @@ const Table = ({ columns, data, changeOrder }) => {
                         : ' 🔼'
                       : ''}
                   </span>
+                  <div>{minMaxFilter()}</div>
                 </th>
               ))}
             </tr>
@@ -234,8 +237,6 @@ function App(){
       newRequest.attributesToSort.splice(idx, 1);
       newRequest.order.splice(idx, 1);
     }
-
-    console.log('new request', newRequest);
 
     setRequest(newRequest);
     displayProducts(newRequest, page, pageSize)
