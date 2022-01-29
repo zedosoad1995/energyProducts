@@ -50,7 +50,7 @@ const Styles = styled.div`
 `
 
 
-const Table = ({ columns, data, changeOrder, attributeTypes }) => {
+const Table = ({ columns, data, changeOrder, attributeTypes, setFilter }) => {
   // Use the state and functions returned from useTable to build your UI
   const {
     getTableProps,
@@ -171,7 +171,7 @@ const Table = ({ columns, data, changeOrder, attributeTypes }) => {
                       : ''}
                   </span>
                   {/* fazer funcao que retorna os devidos filtros */}
-                  <div>{ (attributeTypes[column['Header']] === 'Number') ? minMaxFilter() : null }</div>
+                  <div>{ (attributeTypes[column['Header']] === 'Number') ? minMaxFilter(setFilter(column['Header'])) : null }</div>
                 </th>
               ))}
             </tr>
@@ -201,9 +201,10 @@ function App(){
   const [attrNames, setAttrNames] = useState([]);
 
   const [request, setRequest] = useState({
-    attributesToDisplay: ['distributor', 'category', 'Altura', 'rating', 'numReviews', 'Peso'],
+    attributesToDisplay: ['name', 'distributor', 'category', 'Altura', 'rating', 'numReviews', 'Peso'],
     attributesToSort: [],
-    order: []
+    order: [],
+    filters: []
   });
 
   const [products, setProducts] = useState([]);
@@ -223,6 +224,28 @@ function App(){
 
   const [hasReceivedData, setHasReceivedData] = useState(false);
 
+  const setFilter = (attr) => (val, valType) => {
+    let newRequest = request;
+
+    const idx = newRequest['filters'].findIndex(filter => filter[1] === attr);
+    if(idx === -1){
+      if(valType === 'min'){
+        newRequest['filters'].push(['between', attr, val, 99999999]);
+      }else if(valType === 'max'){
+        newRequest['filters'].push(['between', attr, -9999999999, val]);
+      }
+    }else{
+      if(valType === 'min'){
+        newRequest['filters'][idx][2] = val;
+      }else if(valType === 'max'){
+        newRequest['filters'][idx][3] = val;
+      }
+    }
+
+    setRequest(newRequest);
+    displayProducts(newRequest, page, pageSize);
+  }
+
   function changeOrder(attr, order){
     let newRequest = request;
 
@@ -241,7 +264,7 @@ function App(){
     }
 
     setRequest(newRequest);
-    displayProducts(newRequest, page, pageSize)
+    displayProducts(newRequest, page, pageSize);
   }
 
   function displayProducts(request, page, pageSize){
@@ -297,10 +320,6 @@ function App(){
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    console.log('hey')
-  });
 
   function goToPage(newPage){
     if(!newPage || newPage < 1){
@@ -384,7 +403,7 @@ function App(){
           ))}
         </Select>
       </FormControl>
-      <Table columns={columns} data={products} changeOrder={changeOrder} attributeTypes={attributeTypes}/>
+      <Table columns={columns} data={products} changeOrder={changeOrder} attributeTypes={attributeTypes} setFilter={setFilter}/>
       <div className="pagination" hidden={!hasReceivedData}>
         <button onClick={goToFirstPage} ref={firstPageButton}>
           {'<<'}

@@ -41,13 +41,14 @@ async function getProducts(req, res, next){
     const limit = parseInt(req.query.limit);
     const offset = parseInt(req.query.offset);
 
+    // TODO: function to obtain header
     await getProductsForDisplay(req.body.tableOptions, limit, offset)
     .then(prods => {
         res.status(200).json({
             products: prods['data'],
             maxSize: prods['maxSize'],
             attributeTypes: prods['attributeTypes'],
-            header: getHeader(prods['data']),
+            header: req.body['tableOptions']['attributesToDisplay'],
             limit: limit,
             offset: offset
         });
@@ -62,7 +63,7 @@ async function getAllAttrNames(req, res, next){
     await getProductAttrNames()
     .then(names => {
         // Por estes nomes de uma forma centralizada, talvez no service (business logic)
-        const otherNames = ['distributor', 'category', 'rating', 'numReviews', 'price', 'url', 'marca'];
+        const otherNames = ['name', 'distributor', 'category', 'rating', 'numReviews', 'price', 'url', 'marca'];
         names = names.concat(...otherNames);
         res.status(200).send(names);
     })

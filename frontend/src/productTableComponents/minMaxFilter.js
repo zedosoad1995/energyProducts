@@ -1,4 +1,4 @@
-export function minMaxFilter(){
+export function minMaxFilter(setFilter){
     return (
         <div
             style={{
@@ -6,9 +6,9 @@ export function minMaxFilter(){
             }}
         >
         <input
-            value={''}
             type="number"
             onChange={e => {
+                setFilter(Number(e.target.value), 'min');
             }}
             placeholder={`Min ()`}
             style={{
@@ -18,9 +18,9 @@ export function minMaxFilter(){
         />
         to
         <input
-            value={''}
             type="number"
             onChange={e => {
+                setFilter(Number(e.target.value), 'max');
             }}
             placeholder={`Max ()`}
             style={{

@@ -152,8 +152,8 @@ const getPriceQueryParts = getQueryParts({
                                         joinFieldNewTable: 'productID'});
 
 const getProductsQueryParts = getQueryParts({
-                                        validAttributes: ['url', 'marca'], 
-                                        fieldNames: ['url', 'marca'],
+                                        validAttributes: ['name', 'url', 'marca'], 
+                                        fieldNames: ['name', 'url', 'marca'],
                                         tableName: 'products'});
 
 async function getQuery(attributesToDisplay){
@@ -164,11 +164,11 @@ async function getQuery(attributesToDisplay){
     const [productsSelects,] = getProductsQueryParts(attributesToDisplay);
     const {prodAttrJoins, prodAttrSelects} = await getProdAttrQueryParts(attributesToDisplay);
 
-    const selects = [...distributorsSelects, ...categoriesSelects, ...reviewsSelects, ...pricesSelects, ...productsSelects, ...prodAttrSelects].join(', ');
+    const selects = [...productsSelects, ...distributorsSelects, ...categoriesSelects, ...reviewsSelects, ...pricesSelects, ...prodAttrSelects].join(', ');
     const joins = [...distributorsJoins, ...categoriesJoins, ...reviewsJoins, ...pricesJoins, ...prodAttrJoins].join('');
 
     return `
-        SELECT products.name AS name ${(selects)? ',' : ''} ${selects}
+        SELECT ${selects}
         FROM products ${joins}`;
 }
 
