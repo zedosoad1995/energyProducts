@@ -12,7 +12,7 @@ import MenuItem from "@material-ui/core/MenuItem";
 import FormControl from "@material-ui/core/FormControl";
 import Select from "@material-ui/core/Select";
 
-import { MenuProps, useStyles, getColumnNames } from "./utils";
+import { MenuProps, useStyles, getColumnNames, removeAttributeEffects } from "./utils";
 
 import { minMaxFilter } from './productTableComponents/minMaxFilter';
 
@@ -372,12 +372,9 @@ function App(){
         displayProducts(request, page, pageSize);
       }
     }else{
-      let index = request['attributesToDisplay'].indexOf(selectedAttr);
-      if (index !== -1) {
-        request['attributesToDisplay'].splice(index, 1);
-        setRequest(request);
-        displayProducts(request, page, pageSize);
-      }
+      removeAttributeEffects(request, selectedAttr);
+      setRequest(request);
+      displayProducts(request, page, pageSize);
     }
   }
 

@@ -55,4 +55,24 @@ function getColumnNames(columns, columnNames = []){
   return columnNames;
 }
 
-export { useStyles, MenuProps, getColumnNames };
+function removeAttributeEffects(request, attr){
+  const idxAttrToDisplay = request['attributesToDisplay'].indexOf(attr);
+  if (idxAttrToDisplay !== -1) {
+    request['attributesToDisplay'].splice(idxAttrToDisplay, 1);
+  }
+
+  const idxAttrToSort = request['attributesToSort'].indexOf(attr);
+  if (idxAttrToSort !== -1) {
+    request['attributesToSort'].splice(idxAttrToSort, 1);
+    request['order'].splice(idxAttrToSort, 1);
+  }
+
+  const idxFilters = request['filters'].findIndex(filter => filter[1] === attr);
+  if (idxFilters !== -1) {
+    request['filters'].splice(idxFilters, 1);
+  }
+
+  return request;
+}
+
+export { useStyles, MenuProps, getColumnNames, removeAttributeEffects };
