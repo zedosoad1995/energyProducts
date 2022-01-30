@@ -63,7 +63,7 @@ async function getAllAttrNames(req, res, next){
     await getProductAttrNames()
     .then(names => {
         // Por estes nomes de uma forma centralizada, talvez no service (business logic)
-        const otherNames = ['name', 'distributor', 'category', 'rating', 'numReviews', 'price', 'url', 'marca'];
+        const otherNames = ['Name', 'Distributor', 'Category', 'Rating', 'Num. Reviews', 'Price', 'Url', 'Brand'];
         names = names.concat(...otherNames);
         res.status(200).send(names);
     })

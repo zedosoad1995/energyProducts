@@ -168,7 +168,8 @@ function getWhereQuery(attributesObj, filters){
         switch(command) {
             case 'between':
                 const [minVal, maxVal] = vals;
-                whereStr += `${attrObj['tableAlias']}.\`${attr}\` >= ${minVal} AND ${attrObj['tableAlias']}.\`${attr}\` <= ${maxVal} AND `;
+                whereStr += `${attrObj['tableAlias']}.\`${attrObj['fieldName']}\` >= ${minVal} AND ${
+                    attrObj['tableAlias']}.\`${attrObj['fieldName']}\` <= ${maxVal} AND `;
                 break;
             case 'includes':
                 break
@@ -188,17 +189,40 @@ function getWhereQuery(attributesObj, filters){
     return whereQuery;
 }
 
-async function getQuery(attributesToDisplay, filters){
+function getOrderQuery(attributesObj, attributesToSort, order){
+    let orderQuery = attributesToSort.reduce((orderStr, attr, i) => {
+
+        const attrObj = attributesObj[attr];
+
+        orderStr += `${attrObj['tableAlias']}.\`${attrObj['fieldName']}\` ${order[i]}, `;
+
+        return orderStr;
+    }, '');
+
+    if(orderQuery.length >= 2){
+        orderQuery = orderQuery.substring(0, orderQuery.length - 2);
+    }else{
+        orderQuery = '1';
+    }
+
+    return orderQuery;
+}
+
+async function getQuery(attributesToDisplay, filters, attributesToSort, order, limit, offset){
     const attributesObj = await mergeRequestedAttributes(attributesToDisplay);
     const selects = getSelectQuery(attributesObj);
     const joins = getJoinQuery(attributesObj);
     const wheres = getWhereQuery(attributesObj, filters);
+    const orderBys = getOrderQuery(attributesObj, attributesToSort, order);
 
     return `
         SELECT ${selects}
         FROM products
         ${joins}
-        WHERE ${wheres}`;
+        WHERE ${wheres}
+        ORDER BY ${orderBys}
+        LIMIT ${limit}
+        OFFSET ${offset}`;
 }
 
 function sortProducts(products, attributesToSort, order){
@@ -271,19 +295,16 @@ async function getProductsForDisplay(request, limit = 10, offset = 0){
 
     await errorHandling_getProductsToDisplay(attributesToDisplay, attributesToSort, order, filters);
 
-    const query = await getQuery(attributesToDisplay, filters);
+    const query = await getQuery(attributesToDisplay, filters, attributesToSort, order, limit, offset);
 
     // TODO: fazer conversao do tipo aqui?
     return await dbQuery(query)
-    .then(prods => prods.map((product) => correctProdAttr(product)))
-    //.then(prods => prods.filter(product => canFilterProduct(product, filters)))
-    .then(prods => sortProducts(prods, attributesToSort, order))
     .then(async (prods) => {
         // TODO: attributeTypes para colunas que não pertençam a table productAttributes
         // https://dba.stackexchange.com/questions/30141/mysql-metadata-function-to-get-projected-column-type-in-query may have the answer
         return {
             maxSize: prods.length,
-            data: prods.slice(offset, offset + limit),
+            data: prods,
             attributeTypes: await getDatatype(attributesToDisplay)
         }
     })
