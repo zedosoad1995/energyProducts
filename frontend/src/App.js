@@ -201,7 +201,7 @@ function App(){
   const [attrNames, setAttrNames] = useState([]);
 
   const [request, setRequest] = useState({
-    attributesToDisplay: ['name', 'distributor', 'category', 'Altura', 'rating', 'numReviews', 'Peso'],
+    attributesToDisplay: ['Name', 'Distributor', 'Category', 'Altura', 'Rating', 'Num. Reviews', 'Peso'],
     attributesToSort: [],
     order: [],
     filters: []

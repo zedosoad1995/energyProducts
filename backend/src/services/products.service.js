@@ -4,6 +4,8 @@ const _ = require('lodash');
 const {clip} = require('./utils/math');
 require('dotenv').config();
 
+const metaProds = require('./data/prodsForDisplayMeta.json');
+
 const dbQuery = util.promisify(db.query).bind(db);
 
 async function hasInvalidAttributeNames(attributesToDisplay, invalidAttributeNames){
@@ -59,25 +61,6 @@ async function getDatatype(attributes){
             });
 }
 
-async function getSelectTemplateStr(attribute, idx){
-    const datatype = await getDatatype([attribute])
-        .then(datatypes => datatypes[attribute]);
-
-    const datatypeStr = (datatype === 'Number') ? 'DECIMAL(11, 4)' : 'CHAR'
-
-    return `CAST(pa${idx}.\`${attribute}\` AS ${datatypeStr}) AS \`${attribute}\``;
-}
-
-function getJoinTemplateStr(attribute, idx){
-    return `
-        LEFT JOIN (
-            SELECT productID, value AS \`${attribute}\`
-            FROM productAttributes
-            WHERE attributeName = '${attribute}'
-        ) pa${idx}
-            ON pa${idx}.productID = products.id`;
-}
-
 async function getProductAttrNames(){
     const query = `
         SELECT DISTINCT attributeName
@@ -90,86 +73,98 @@ async function getProductAttrNames(){
             });
 }
 
-async function getProdAttrQueryParts(attributesToDisplay){
-    const validAttr = await getProductAttrNames();
+async function mergeRequestedAttributes(attrToDisplay){
+    const allProdAttributes = await getProductAttrNames();
 
-    let {prodAttrJoins, prodAttrSelects} = await attributesToDisplay.reduce(async (obj, attribute, i) => {   
-        await obj.then(async (res) => {
+    const requestedAttr = {};
 
-            if(validAttr.includes(attribute)){
-                res['prodAttrJoins'].push(getJoinTemplateStr(attribute, i));
-                res['prodAttrSelects'].push(await getSelectTemplateStr(attribute, i));
-            }
-        })
+    let prodAttrNum = 1;
 
-        return obj;
-    }, Promise.resolve({prodAttrJoins: [], prodAttrSelects: []}));
+    attrToDisplay.forEach(attr => {
+        if(Object.keys(metaProds).includes(attr)){
+            requestedAttr[attr] = metaProds[attr];
 
-    return {prodAttrJoins, prodAttrSelects};
-}
-
-const getQueryParts = ({validAttributes, fieldNames, tableName, joinFieldProduct = 'id', joinFieldNewTable = 'id'}) => attributesToDisplay => {
-    
-    const {selects, joins} = validAttributes.reduce((obj, attribute, i) => {
-        if(attributesToDisplay.includes(attribute)){
-            obj['selects'].push(`${tableName}.${fieldNames[i]} AS ${attribute}`);
-
-            obj['joins'] = [
-                `
-                LEFT JOIN ${tableName}
-                    ON ${tableName}.${joinFieldNewTable} = products.${joinFieldProduct}
-                `];
+            return;
         }
 
-        return obj;
-    }, {selects: [], joins: []});
+        if(allProdAttributes.includes(attr)){
+            requestedAttr[attr] = {
+                fieldName: attr,
+                table: 'productAttributes',
+                tableAlias: `pa${prodAttrNum}`,
+                prodAttrJoin: true
+            };
 
-    return [selects, joins];
-};
+            prodAttrNum++;
+        }
+    })
 
-const getDistributorQueryParts = getQueryParts({
-                                        validAttributes: ['distributor'], 
-                                        fieldNames: ['name'],
-                                        tableName: 'distributors', 
-                                        joinFieldProduct: 'distributorID'});
+    return requestedAttr;
+}
 
-const getCategoryQueryParts = getQueryParts({
-                                        validAttributes: ['category'], 
-                                        fieldNames: ['name'],
-                                        tableName: 'categories', 
-                                        joinFieldProduct: 'categoryID'});
+function getSelectQuery(attributesObj){
+    let selectQuery = Object.entries(attributesObj).reduce((selectStr, [fieldNameAlias, attrObj]) => {
+        if(!('table' in attrObj && 'fieldName' in attrObj)) return selectQuery;
 
-const getReviewQueryParts = getQueryParts({
-                                        validAttributes: ['rating', 'numReviews'], 
-                                        fieldNames: ['rating', 'numReviews'],
-                                        tableName: 'reviews', 
-                                        joinFieldProduct: 'reviewsID'});
+        selectStr += `${('tableAlias' in attrObj) ? attrObj['tableAlias'] : attrObj['table']
+                    }.${attrObj['fieldName']} AS \`${fieldNameAlias}\`, `;
+        return selectStr;
+    }, '');
 
-const getPriceQueryParts = getQueryParts({
-                                        validAttributes: ['price'], 
-                                        fieldNames: ['price'],
-                                        tableName: 'prices', 
-                                        joinFieldNewTable: 'productID'});
+    if(selectQuery.length >= 2){
+        selectQuery = selectQuery.substring(0, selectQuery.length - 2);
+    }else{
+        selectQuery = '';
+    }
 
-const getProductsQueryParts = getQueryParts({
-                                        validAttributes: ['name', 'url', 'marca'], 
-                                        fieldNames: ['name', 'url', 'marca'],
-                                        tableName: 'products'});
+    return selectQuery;
+}
+
+function getJoinQuery(attributesObj){
+    const joinTables = []
+
+    return Object.entries(attributesObj).reduce((joinStr, [fieldNameAlias, attrObj]) => {
+        if(!('fieldName' in attrObj) || attrObj['noJoin']) return joinStr;
+
+        if('prodAttrJoin' in attrObj){
+            if(!('tableAlias' in attrObj)) return joinStr;
+
+            joinStr += 
+                `LEFT JOIN (
+                    SELECT productID, value AS \`${fieldNameAlias}\`
+                    FROM productAttributes
+                    WHERE attributeName = '${attrObj['fieldName']}'
+                ) ${attrObj['tableAlias']}
+                    ON \`${attrObj['tableAlias']}\`.productID = products.id
+                `;
+        }else{
+            if(!('table' in attrObj) || !('thisJoinField' in attrObj || 'productJoinField' in attrObj) ||
+                joinTables.includes(attrObj['table'])){
+                    return joinStr;
+                }
+
+            joinStr += 
+                `LEFT JOIN ${attrObj['table']}
+                    ON ${attrObj['table']}.${('thisJoinField' in attrObj) ? attrObj['thisJoinField'] : 'id'
+                } = products.${('productJoinField' in attrObj) ? attrObj['productJoinField'] : 'id'}
+                `;
+
+            joinTables.push(attrObj['table']);
+        }
+
+        return joinStr;
+    }, '');
+}
 
 async function getQuery(attributesToDisplay){
-    const [distributorsSelects, distributorsJoins] = getDistributorQueryParts(attributesToDisplay);
-    const [categoriesSelects, categoriesJoins] = getCategoryQueryParts(attributesToDisplay);
-    const [reviewsSelects, reviewsJoins] = getReviewQueryParts(attributesToDisplay);
-    const [pricesSelects, pricesJoins] = getPriceQueryParts(attributesToDisplay);
-    const [productsSelects,] = getProductsQueryParts(attributesToDisplay);
-    const {prodAttrJoins, prodAttrSelects} = await getProdAttrQueryParts(attributesToDisplay);
-
-    const selects = [...productsSelects, ...distributorsSelects, ...categoriesSelects, ...reviewsSelects, ...pricesSelects, ...prodAttrSelects].join(', ');
-    const joins = [...distributorsJoins, ...categoriesJoins, ...reviewsJoins, ...pricesJoins, ...prodAttrJoins].join('');
+    const attributesObj = await mergeRequestedAttributes(attributesToDisplay);
+    const selects = getSelectQuery(attributesObj);
+    const joins = getJoinQuery(attributesObj);
 
     return `
         SELECT ${selects}
-        FROM products ${joins}`;
+        FROM products
+        ${joins}`;
 }
 
 function sortProducts(products, attributesToSort, order){
