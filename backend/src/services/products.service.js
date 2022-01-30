@@ -106,8 +106,7 @@ function getSelectQuery(attributesObj){
     let selectQuery = Object.entries(attributesObj).reduce((selectStr, [fieldNameAlias, attrObj]) => {
         if(!('table' in attrObj && 'fieldName' in attrObj)) return selectQuery;
 
-        selectStr += `${('tableAlias' in attrObj) ? attrObj['tableAlias'] : attrObj['table']
-                    }.${attrObj['fieldName']} AS \`${fieldNameAlias}\`, `;
+        selectStr += `${attrObj['tableAlias']}.\`${attrObj['fieldName']}\` AS \`${fieldNameAlias}\`, `;
         return selectStr;
     }, '');
 
@@ -156,15 +155,50 @@ function getJoinQuery(attributesObj){
     }, '');
 }
 
-async function getQuery(attributesToDisplay){
+function getWhereQuery(attributesObj, filters){
+    let whereQuery = filters.reduce((whereStr, filter) => {
+
+        const [command, attr, ...vals] = filter;
+
+        // TODO: deal with this case
+        //if(!(attr in product)) return true;
+
+        const attrObj = attributesObj[attr];
+
+        switch(command) {
+            case 'between':
+                const [minVal, maxVal] = vals;
+                whereStr += `${attrObj['tableAlias']}.\`${attr}\` >= ${minVal} AND ${attrObj['tableAlias']}.\`${attr}\` <= ${maxVal} AND `;
+                break;
+            case 'includes':
+                break
+            default:
+                throw new Error(`Invalid command given: '${command}'.\n The valid commands are: 'between', 'includes'`);
+        }
+
+        return whereStr;
+    }, '');
+
+    if(whereQuery.length >= 5){
+        whereQuery = whereQuery.substring(0, whereQuery.length - 5);
+    }else{
+        whereQuery = 'TRUE';
+    }
+
+    return whereQuery;
+}
+
+async function getQuery(attributesToDisplay, filters){
     const attributesObj = await mergeRequestedAttributes(attributesToDisplay);
     const selects = getSelectQuery(attributesObj);
     const joins = getJoinQuery(attributesObj);
+    const wheres = getWhereQuery(attributesObj, filters);
 
     return `
         SELECT ${selects}
         FROM products
-        ${joins}`;
+        ${joins}
+        WHERE ${wheres}`;
 }
 
 function sortProducts(products, attributesToSort, order){
@@ -237,12 +271,12 @@ async function getProductsForDisplay(request, limit = 10, offset = 0){
 
     await errorHandling_getProductsToDisplay(attributesToDisplay, attributesToSort, order, filters);
 
-    const query = await getQuery(attributesToDisplay)
+    const query = await getQuery(attributesToDisplay, filters);
 
     // TODO: fazer conversao do tipo aqui?
     return await dbQuery(query)
     .then(prods => prods.map((product) => correctProdAttr(product)))
-    .then(prods => prods.filter(product => canFilterProduct(product, filters)))
+    //.then(prods => prods.filter(product => canFilterProduct(product, filters)))
     .then(prods => sortProducts(prods, attributesToSort, order))
     .then(async (prods) => {
         // TODO: attributeTypes para colunas que não pertençam a table productAttributes

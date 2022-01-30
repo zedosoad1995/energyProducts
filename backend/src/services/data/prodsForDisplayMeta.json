@@ -2,41 +2,49 @@
     "Distributor": {
         "fieldName": "name",
         "table": "distributors",
+        "tableAlias": "distributors",
         "productJoinField": "distributorID"
     },
     "Category": {
         "fieldName": "name",
         "table": "categories",
+        "tableAlias": "categories",
         "productJoinField": "categoryID"
     },
     "Rating": {
         "fieldName": "rating",
         "table": "reviews",
+        "tableAlias": "reviews",
         "productJoinField": "reviewsID"
     },
     "Num. Reviews": {
         "fieldName": "numReviews",
         "table": "reviews",
+        "tableAlias": "reviews",
         "productJoinField": "reviewsID"
     },
     "Price": {
         "fieldName": "price",
         "table": "prices",
+        "tableAlias": "prices",
         "thisJoinField": "productID"
     },
     "Name": {
         "fieldName": "name",
         "table": "products",
+        "tableAlias": "products",
         "noJoin": true
     },
     "Url": {
         "fieldName": "url",
         "table": "products",
+        "tableAlias": "products",
         "noJoin": true
     },
     "Brand": {
         "fieldName": "brand",
         "table": "products",
+        "tableAlias": "products",
         "noJoin": true
     }
 }
