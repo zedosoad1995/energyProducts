@@ -1,5 +1,5 @@
 const { getWortenProducts } = require('../services/scrape/worten.service');
-const { getProductsForDisplay, getProductAttrNames } = require('../services/products.service');
+const { getAllAtributeNames, ProductsQuery } = require('../services/products.service');
 const Promise = require("bluebird");
 const {getProductCatalogUrls, updateDBWithScrapedProducts, getProductUrlsInDB} = require('../db/queries');
 const {getHeader} = require('../services/utils/dataManipulation');
@@ -41,30 +41,32 @@ async function getProducts(req, res, next){
     const limit = parseInt(req.query.limit);
     const offset = parseInt(req.query.offset);
 
-    // TODO: function to obtain header
-    await getProductsForDisplay(req.body.tableOptions, limit, offset)
-    .then(prods => {
+    await ProductsQuery.initializeMainQuery(req.body.tableOptions);
+
+    try {
+        const products = await ProductsQuery.getProducts(limit, offset);
+        const header = ProductsQuery.getHeader();
+        const maxSize = await ProductsQuery.getNumRows();
+        const attributeTypes = ProductsQuery.getAttributeTypes();
+
         res.status(200).json({
-            products: prods['data'],
-            maxSize: prods['maxSize'],
-            attributeTypes: prods['attributeTypes'],
-            header: req.body['tableOptions']['attributesToDisplay'],
-            limit: limit,
-            offset: offset
+            products,
+            maxSize,
+            attributeTypes,
+            header,
+            limit,
+            offset
         });
-    })
-    .catch(error => {
+
+    } catch(error) {
         console.error(error);
         res.status(400).send('Bad Request');
-    });
+    }
 }
 
 async function getAllAttrNames(req, res, next){
-    await getProductAttrNames()
+    await getAllAtributeNames()
     .then(names => {
-        // Por estes nomes de uma forma centralizada, talvez no service (business logic)
-        const otherNames = ['Name', 'Distributor', 'Category', 'Rating', 'Num. Reviews', 'Price', 'Url', 'Brand'];
-        names = names.concat(...otherNames);
         res.status(200).send(names);
     })
     .catch(error => {

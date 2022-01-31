@@ -3,48 +3,56 @@
         "fieldName": "name",
         "table": "distributors",
         "tableAlias": "distributors",
-        "productJoinField": "distributorID"
+        "productJoinField": "distributorID",
+        "dataType": "String"
     },
     "Category": {
         "fieldName": "name",
         "table": "categories",
         "tableAlias": "categories",
-        "productJoinField": "categoryID"
+        "productJoinField": "categoryID",
+        "dataType": "String"
     },
     "Rating": {
         "fieldName": "rating",
         "table": "reviews",
         "tableAlias": "reviews",
-        "productJoinField": "reviewsID"
+        "productJoinField": "reviewsID",
+        "dataType": "Number"
     },
     "Num. Reviews": {
         "fieldName": "numReviews",
         "table": "reviews",
         "tableAlias": "reviews",
-        "productJoinField": "reviewsID"
+        "productJoinField": "reviewsID",
+        "dataType": "Number"
     },
     "Price": {
         "fieldName": "price",
         "table": "prices",
         "tableAlias": "prices",
-        "thisJoinField": "productID"
+        "thisJoinField": "productID",
+        "dataType": "Number"
     },
     "Name": {
         "fieldName": "name",
         "table": "products",
         "tableAlias": "products",
-        "noJoin": true
+        "noJoin": true,
+        "dataType": "String"
     },
     "Url": {
         "fieldName": "url",
         "table": "products",
         "tableAlias": "products",
-        "noJoin": true
+        "noJoin": true,
+        "dataType": "String"
     },
     "Brand": {
         "fieldName": "brand",
         "table": "products",
         "tableAlias": "products",
-        "noJoin": true
+        "noJoin": true,
+        "dataType": "String"
     }
 }

@@ -63,14 +63,23 @@ async function getDatatype(attributes){
 
 async function getProductAttrNames(){
     const query = `
-        SELECT DISTINCT attributeName
+        SELECT DISTINCT attributeName, datatype
         FROM productAttributes;`;
 
     return dbQuery(query)
-            .then(row => row.map(val => val['attributeName']))
+            .then(attrs => attrs.reduce((obj, val) => {
+                obj[val['attributeName']] = val['datatype'];
+                return obj;
+            }, {}))
             .catch(error => {
                 throw(error);
             });
+}
+
+async function getAllAtributeNames(){
+    const allProdAttributes = await getProductAttrNames();
+
+    return Object.keys(metaProds).concat(Object.keys(allProdAttributes));
 }
 
 async function mergeRequestedAttributes(attrToDisplay){
@@ -87,12 +96,13 @@ async function mergeRequestedAttributes(attrToDisplay){
             return;
         }
 
-        if(allProdAttributes.includes(attr)){
+        if(Object.keys(allProdAttributes).includes(attr)){
             requestedAttr[attr] = {
                 fieldName: attr,
                 table: 'productAttributes',
                 tableAlias: `pa${prodAttrNum}`,
-                prodAttrJoin: true
+                prodAttrJoin: true,
+                dataType: allProdAttributes[attr]
             };
 
             prodAttrNum++;
@@ -208,23 +218,6 @@ function getOrderQuery(attributesObj, attributesToSort, order){
     return orderQuery;
 }
 
-async function getQuery(attributesToDisplay, filters, attributesToSort, order, limit, offset){
-    const attributesObj = await mergeRequestedAttributes(attributesToDisplay);
-    const selects = getSelectQuery(attributesObj);
-    const joins = getJoinQuery(attributesObj);
-    const wheres = getWhereQuery(attributesObj, filters);
-    const orderBys = getOrderQuery(attributesObj, attributesToSort, order);
-
-    return `
-        SELECT ${selects}
-        FROM products
-        ${joins}
-        WHERE ${wheres}
-        ORDER BY ${orderBys}
-        LIMIT ${limit}
-        OFFSET ${offset}`;
-}
-
 function sortProducts(products, attributesToSort, order){
     if(!attributesToSort || !order || order.length === 0) return products;
 
@@ -286,6 +279,75 @@ function canFilterProduct(product, filters){
         });
 }
 
+class ProductsQuery {
+
+    static #mainQuery;
+    static #attributesObj;
+
+    constructor(){
+    }
+
+    static async initializeMainQuery(request){
+        const {attributesToDisplay, attributesToSort, order, filters} = request;
+
+        await errorHandling_getProductsToDisplay(attributesToDisplay, attributesToSort, order, filters);
+
+        this.#mainQuery = await this.#getQuery(attributesToDisplay, filters, attributesToSort, order);
+    }
+
+    static async getProducts(limit = 10, offset = 0){
+        limit = clip(limit, 0, process.env.MAX_ITEMS_PER_PAGE);
+        offset = (offset < 0) ? 0 : offset;
+
+        console.log(limit);
+
+        const query = this.#mainQuery + `
+            LIMIT ${limit}
+            OFFSET ${offset}`;
+
+        return await dbQuery(query)
+            .catch(error => {
+                throw(error);
+            });
+    }
+
+    static getHeader(){
+        return Object.keys(this.#attributesObj);
+    }
+
+    static async getNumRows(){
+        const query = 'SELECT COUNT(*) AS cnt FROM (' + this.#mainQuery + ') _';
+
+        return await dbQuery(query)
+            .then(cnt => cnt[0]['cnt'])
+            .catch(error => {
+                throw(error);
+            });
+    }
+
+    static async getAttributeTypes(){
+        return Object.entries(this.#attributesObj).reduce((obj, [key, attrObj]) => {
+                obj[key] = attrObj['dataType'];
+                return obj;
+            }, {});
+    }
+
+    static async #getQuery(attributesToDisplay, filters, attributesToSort, order){
+        this.#attributesObj = await mergeRequestedAttributes(attributesToDisplay);
+        const selects = getSelectQuery(this.#attributesObj);
+        const joins = getJoinQuery(this.#attributesObj);
+        const wheres = getWhereQuery(this.#attributesObj, filters);
+        const orderBys = getOrderQuery(this.#attributesObj, attributesToSort, order);
+    
+        return `
+            SELECT ${selects}
+            FROM products
+            ${joins}
+            WHERE ${wheres}
+            ORDER BY ${orderBys}`;
+    }
+}
+
 // request = {attributesToDisplay: string[], attributesToSort: string[], order: string[], filters: [string[], ...]}
 async function getProductsForDisplay(request, limit = 10, offset = 0){
     limit = clip(limit, 0, process.env.MAX_ITEMS_PER_PAGE);
@@ -314,6 +376,6 @@ async function getProductsForDisplay(request, limit = 10, offset = 0){
 }
 
 module.exports = {
-    getProductsForDisplay,
-    getProductAttrNames
+    getAllAtributeNames,
+    ProductsQuery
 }
