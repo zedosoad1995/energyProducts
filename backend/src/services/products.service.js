@@ -114,9 +114,14 @@ async function mergeRequestedAttributes(attrToDisplay){
 
 function getSelectQuery(attributesObj){
     let selectQuery = Object.entries(attributesObj).reduce((selectStr, [fieldNameAlias, attrObj]) => {
-        if(!('table' in attrObj && 'fieldName' in attrObj)) return selectQuery;
+        if(!('table' in attrObj && 'fieldName' in attrObj && 'dataType' in attrObj)) return selectQuery;
 
-        selectStr += `${attrObj['tableAlias']}.\`${attrObj['fieldName']}\` AS \`${fieldNameAlias}\`, `;
+        if(attrObj['dataType'] === 'Number'){
+            selectStr += `CAST(${attrObj['tableAlias']}.\`${attrObj['fieldName']}\` AS DECIMAL(11, 4)) AS \`${fieldNameAlias}\`, `;
+        }else{
+            selectStr += `${attrObj['tableAlias']}.\`${attrObj['fieldName']}\` AS \`${fieldNameAlias}\`, `;
+        }
+
         return selectStr;
     }, '');
 
@@ -178,8 +183,8 @@ function getWhereQuery(attributesObj, filters){
         switch(command) {
             case 'between':
                 const [minVal, maxVal] = vals;
-                whereStr += `${attrObj['tableAlias']}.\`${attrObj['fieldName']}\` >= ${minVal} AND ${
-                    attrObj['tableAlias']}.\`${attrObj['fieldName']}\` <= ${maxVal} AND `;
+                whereStr += `\`${attr}\` >= ${minVal} AND \`${attr}\` <= ${maxVal} AND `;
+
                 break;
             case 'includes':
                 break
@@ -202,9 +207,7 @@ function getWhereQuery(attributesObj, filters){
 function getOrderQuery(attributesObj, attributesToSort, order){
     let orderQuery = attributesToSort.reduce((orderStr, attr, i) => {
 
-        const attrObj = attributesObj[attr];
-
-        orderStr += `${attrObj['tableAlias']}.\`${attrObj['fieldName']}\` ${order[i]}, `;
+        orderStr += `\`${attr}\` ${order[i]}, `;
 
         return orderStr;
     }, '');
