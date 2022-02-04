@@ -326,7 +326,7 @@ class ProductsQuery {
             });
     }
 
-    static async getMinMax(attr){
+    static async #getMinMax(attr){
         // TODO: pensar como lidar (deverei enviar erro?)
         if(!(attr in this.#attributesObj && this.#attributesObj[attr]['dataType'] === 'Number')) return;
 
@@ -341,6 +341,54 @@ class ProductsQuery {
             .catch(error => {
                 throw(error);
             });
+    }
+
+    static async #getAllValuesInAttribute(attr){
+        // TODO: pensar como lidar (deverei enviar erro?)
+        if(!(attr in this.#attributesObj && ['String', 'Boolean'].includes(this.#attributesObj[attr]['dataType']))) return;
+
+        const query = `
+            SELECT DISTINCT prods.\`${attr}\` as val
+            FROM (${this.#mainQuery}) prods`;
+
+        return await dbQuery(query)
+            .then(rows => {
+                return rows.map(row => row['val']);
+            })
+            .catch(error => {
+                throw(error);
+            });
+    }
+
+    static async #getSingleAttributeRange(attr){
+        if(!(attr in this.#attributesObj && 'dataType' in this.#attributesObj[attr])) return;
+
+        switch(this.#attributesObj[attr]['dataType']) {
+            case 'String':
+            case 'Boolean':
+                return this.#getAllValuesInAttribute(attr);
+            case 'Number':
+                return this.#getMinMax(attr);
+            default:
+                throw new Error(`Invalid dataType. Must be one of the types: 'Boolean', 'String', 'Number'`);
+        }
+    }
+
+    static async getAttributeRanges(){
+        const header = this.getHeader();
+
+        return await header.reduce(async (rangesObj, attr) => {
+            await this.#getSingleAttributeRange(attr)
+            .then(async (ranges) => {
+
+                await rangesObj
+                .then(obj => {
+                    obj[attr] = ranges;
+                });
+            });
+
+            return rangesObj;
+        }, Promise.resolve({}))
     }
 
     static async getAttributeTypes(){
