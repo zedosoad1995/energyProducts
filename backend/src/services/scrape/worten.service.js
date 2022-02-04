@@ -1,7 +1,9 @@
-const axios = require('axios');
+let axios = require('axios');
 const cheerio = require("cheerio");
 const Promise = require("bluebird");
 const {Worten} = require('../data/attributesTypes.json');
+
+const antiIPBanConfigs = require('../utils/ipBlockedAxiosConfigs');
 
 const numberKeys = Worten['Numbers'];
 const boolKeys = Worten['Booleans'];
@@ -17,7 +19,7 @@ function convertProdAttribute(val, type){
         if(/^\d+(?:\.\d+)?[\/-]\d+(?:\.\d+)?/.test(convValueStr))
             return convValueStr.match(/^(\d+(?:\.\d+)?)[\/-](\d+(?:\.\d+)?)/).slice(1).map(Number);
 
-        const convValue = Number(convValueStr);
+        const convValue = convValueStr;
         
         // TODO: Logging, para quando ha valor invalido (pensar tb sobre como resolver throw)
         if(convValueStr.trim().length === 0 || convValueStr[0] === ' ' || isNaN(convValue)) 
@@ -27,9 +29,9 @@ function convertProdAttribute(val, type){
 
     }else if(type === 'Bool'){
         if(val === 'Sim'){
-            return true;
+            return 'true';
         }else if(val === 'Não'){
-            return false;
+            return 'false';
         }else{
             throw new Error(`Invalid boolean value to convert. It can only have the following values: Sim, Não.\nInstead it has the value: ${val}`);
         }
@@ -61,7 +63,11 @@ async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
     // Get more details of product. Assumes these values are static, therefore it only obtains once (when it is a new product)
     if(!hasProductAttributesInDB){
 
-        await axios.get("https://www.worten.pt" + product['default_url']).then(resp => {
+        const axiosConfig = {
+            headers: antiIPBanConfigs
+        };
+
+        await axios.get("https://www.worten.pt" + product['default_url'], axiosConfig).then(resp => {
             const $ = cheerio.load(resp.data);
 
             productObj['more-details'] = {};
@@ -72,8 +78,11 @@ async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
                 const attrValue = $(e).find('.details-value').text();
 
                 let attrType = 'NoType';
-                if(numberKeys.includes(key)) attrType = 'Number'
-                else if(boolKeys.includes(key)) attrType = 'Bool'
+                if(numberKeys.includes(key)){
+                    attrType = 'Number';
+                }else if(boolKeys.includes(key)){
+                    attrType = 'Bool';
+                }
 
                 const convertedVal = convertProdAttribute(attrValue, attrType);
 
@@ -124,6 +133,9 @@ async function getWortenProducts(url, urlsWithAttributes){
             'x-render-events': 'product_filters:changed',
         }
     };
+
+    // Anti IP ban
+    axiosConfig['headers'] = {...axiosConfig['headers'], ...antiIPBanConfigs};
     
     let pageNum = 1;
 

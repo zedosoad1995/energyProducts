@@ -5,6 +5,7 @@ const {getProductCatalogUrls, updateDBWithScrapedProducts, getProductUrlsInDB} =
 const {getHeader} = require('../services/utils/dataManipulation');
 
 async function wortenScraper(_, res, next){
+
     const urls = await getProductCatalogUrls('Worten')
     .catch((err) => {
         res.sendStatus(500)
@@ -24,9 +25,9 @@ async function wortenScraper(_, res, next){
     )
     .then(res => [].concat.apply([], res))
     .catch((error) => {
-        console.log(error);
         res.sendStatus(500) && next(error);
-        throw error;
+        console.error(error);
+        throw new Error('Bad Request Scraping Products');
     });
 
     await updateDBWithScrapedProducts(scrapedProds, urlsNoAttributes)
@@ -47,7 +48,7 @@ async function getProducts(req, res, next){
         const products = await ProductsQuery.getProducts(limit, offset);
         const header = ProductsQuery.getHeader();
         const maxSize = await ProductsQuery.getNumRows();
-        const attributeTypes = ProductsQuery.getAttributeTypes();
+        const attributeTypes = await ProductsQuery.getAttributeTypes();
 
         res.status(200).json({
             products,

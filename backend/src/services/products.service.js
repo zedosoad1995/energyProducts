@@ -299,8 +299,6 @@ class ProductsQuery {
         limit = clip(limit, 0, process.env.MAX_ITEMS_PER_PAGE);
         offset = (offset < 0) ? 0 : offset;
 
-        console.log(limit);
-
         const query = this.#mainQuery + `
             LIMIT ${limit}
             OFFSET ${offset}`;
@@ -346,33 +344,6 @@ class ProductsQuery {
             WHERE ${wheres}
             ORDER BY ${orderBys}`;
     }
-}
-
-// request = {attributesToDisplay: string[], attributesToSort: string[], order: string[], filters: [string[], ...]}
-async function getProductsForDisplay(request, limit = 10, offset = 0){
-    limit = clip(limit, 0, process.env.MAX_ITEMS_PER_PAGE);
-    offset = (offset < 0) ? 0 : offset;
-
-    const {attributesToDisplay, attributesToSort, order, filters} = request;
-
-    await errorHandling_getProductsToDisplay(attributesToDisplay, attributesToSort, order, filters);
-
-    const query = await getQuery(attributesToDisplay, filters, attributesToSort, order, limit, offset);
-
-    // TODO: fazer conversao do tipo aqui?
-    return await dbQuery(query)
-    .then(async (prods) => {
-        // TODO: attributeTypes para colunas que não pertençam a table productAttributes
-        // https://dba.stackexchange.com/questions/30141/mysql-metadata-function-to-get-projected-column-type-in-query may have the answer
-        return {
-            maxSize: prods.length,
-            data: prods,
-            attributeTypes: await getDatatype(attributesToDisplay)
-        }
-    })
-    .catch(error => {
-        throw(error);
-    });
 }
 
 module.exports = {

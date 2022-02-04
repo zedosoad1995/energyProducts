@@ -127,7 +127,6 @@ const Table = ({ columns, data, changeOrder, attributeTypes, setFilter }) => {
       }
     })
 
-    console.log(updatedOrderCols);
     setOrderCols(updatedOrderCols);
   }, [columnsState]);
 
@@ -201,7 +200,8 @@ function App(){
   const [attrNames, setAttrNames] = useState([]);
 
   const [request, setRequest] = useState({
-    attributesToDisplay: ['Name', 'Distributor', 'Category', 'Altura', 'Rating', 'Num. Reviews', 'Peso'],
+    // TODO: does not accept names with a ".". Find a way to make that work
+    attributesToDisplay: ['Name', 'Distributor', 'Category', 'Altura', 'Rating', 'Num Reviews', 'Peso'],
     attributesToSort: [],
     order: [],
     filters: []

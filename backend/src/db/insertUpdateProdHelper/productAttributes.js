@@ -7,10 +7,13 @@ const dbQuery = util.promisify(db.query).bind(db);
 // Ideia, no final agrupar todos os atributos e ver a moda. Se algum tiver um valor diferent, inseri-lo.
 // Ou entao... sera que o campo do tipo importa?
 function getAttributeType(str){
-    if(isNaN(str))
+    if(['true', 'false'].includes(str)){
+        return 'Boolean';
+    }else if(isNaN(str)){
         return 'String';
-    else
+    }else{
         return 'Number';
+    }
 }
 
 async function fillProductAttributes(productsNotInDB, urlToProductId, productsInDBWithNewAttr){
