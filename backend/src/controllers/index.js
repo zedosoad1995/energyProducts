@@ -50,6 +50,8 @@ async function getProducts(req, res, next){
         const maxSize = await ProductsQuery.getNumRows();
         const attributeTypes = await ProductsQuery.getAttributeTypes();
 
+        console.log(await ProductsQuery.getMinMax('Altura'));
+
         res.status(200).json({
             products,
             maxSize,

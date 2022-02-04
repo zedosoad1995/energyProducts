@@ -326,6 +326,23 @@ class ProductsQuery {
             });
     }
 
+    static async getMinMax(attr){
+        // TODO: pensar como lidar (deverei enviar erro?)
+        if(!(attr in this.#attributesObj && this.#attributesObj[attr]['dataType'] === 'Number')) return;
+
+        const query = `
+            SELECT MIN(prods.\`${attr}\`) as min, MAX(prods.\`${attr}\`) as max
+            FROM (${this.#mainQuery}) prods`;
+
+        return await dbQuery(query)
+            .then(row => {
+                return {min: row[0]['min'], max: row[0]['max']};
+            })
+            .catch(error => {
+                throw(error);
+            });
+    }
+
     static async getAttributeTypes(){
         return Object.entries(this.#attributesObj).reduce((obj, [key, attrObj]) => {
                 obj[key] = attrObj['dataType'];
