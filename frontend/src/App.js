@@ -4,17 +4,11 @@ import styled from 'styled-components';
 import { getProducts, getAttrNames } from './services/product.service';
 import _ from 'lodash';
 
-import Checkbox from "@material-ui/core/Checkbox";
-import InputLabel from "@material-ui/core/InputLabel";
-import ListItemIcon from "@material-ui/core/ListItemIcon";
-import ListItemText from "@material-ui/core/ListItemText";
-import MenuItem from "@material-ui/core/MenuItem";
-import FormControl from "@material-ui/core/FormControl";
-import Select from "@material-ui/core/Select";
+import { CheckboxList } from './components/checkboxList.component';
 
-import { MenuProps, useStyles, getColumnNames, removeAttributeEffects } from "./utils";
+import { getColumnNames, removeAttributeEffects } from "./utils";
 
-import { minMaxFilter } from './productTableComponents/minMaxFilter';
+import { minMaxFilter, listValues } from './productTableComponents/minMaxFilter';
 
 const Styles = styled.div`
   padding: 1rem;
@@ -50,7 +44,7 @@ const Styles = styled.div`
 `
 
 
-const Table = ({ columns, data, changeOrder, attributeTypes, setFilter }) => {
+const Table = ({ columns, data, changeOrder, attributeTypes, setFilter, attributeRanges, itemCheckboxHandler }) => {
   // Use the state and functions returned from useTable to build your UI
   const {
     getTableProps,
@@ -170,7 +164,8 @@ const Table = ({ columns, data, changeOrder, attributeTypes, setFilter }) => {
                       : ''}
                   </span>
                   {/* fazer funcao que retorna os devidos filtros */}
-                  <div>{ (attributeTypes[column['Header']] === 'Number') ? minMaxFilter(setFilter(column['Header'])) : null }</div>
+                  <div>{ (attributeTypes[column['Header']] === 'Number') ? minMaxFilter(setFilter(column['Header']), attributeRanges[column['Header']]) : 
+                                                                          listValues(itemCheckboxHandler(column['Header']), attributeRanges[column['Header']]) }</div>
                 </th>
               ))}
             </tr>
@@ -195,8 +190,6 @@ const Table = ({ columns, data, changeOrder, attributeTypes, setFilter }) => {
 };
 
 function App(){
-  const classes = useStyles();
-  const [selected, setSelected] = useState([]);
   const [attrNames, setAttrNames] = useState([]);
 
   const [request, setRequest] = useState({
@@ -210,6 +203,7 @@ function App(){
   const [products, setProducts] = useState([]);
   const [columns, setColumns] = useState([]);
   const [attributeTypes, setAttributeTypes] = useState([]);
+  const [attributeRanges, setAttributeRanges] = useState({});
 
   const [pageSize, setPageSize] = useState(10);
   const [offset, setOffset] = useState(0);
@@ -223,6 +217,25 @@ function App(){
   const lastPageButton = useRef();
 
   const [hasReceivedData, setHasReceivedData] = useState(false);
+
+  const itemCheckboxHandler = (attr) => (val) => {
+    let newRequest = request;
+
+    val = val.currentTarget.getAttribute('data-value');
+
+    if(!('attributesToDisplay' in request)) return;
+
+    const idx = newRequest['filters'].findIndex(filter => filter[1] === attr);
+
+    if(idx === -1){
+      newRequest['filters'].push(['includes', attr, [val]]);
+    }else{
+      newRequest['filters'].push(['includes', attr, newRequest['filters'][idx][2].concat(val)]);
+    }
+
+    setRequest(newRequest);
+    displayProducts(newRequest, page, pageSize);
+  }
 
   const setFilter = (attr) => (val, valType) => {
     let newRequest = request;
@@ -273,11 +286,12 @@ function App(){
     setOffset(offsetVal);
 
     getProducts(request, pageSize, offsetVal)
-    .then(({products, columns, maxSize, attributeTypes}) => {
+    .then(({products, columns, maxSize, attributeTypes, attributeRanges}) => {
 
       setProducts(products);
       setColumns(columns);
       setAttributeTypes(attributeTypes);
+      setAttributeRanges(attributeRanges);
 
       if(columns.length > 0){
         setHasReceivedData(true);
@@ -355,11 +369,6 @@ function App(){
     goToPage(Number(page));
   }
 
-  function handleChange(event){
-    const value = event.target.value;
-    setSelected(value);
-  };
-
   function handleCheckboxChange(event){
     if(!('attributesToDisplay' in request)) return;
 
@@ -380,27 +389,9 @@ function App(){
 
   return (
     <Styles>
-      <FormControl className={classes.formControl}>
-        <InputLabel id="mutiple-select-label">Multiple Select</InputLabel>
-        <Select
-          labelId="mutiple-select-label"
-          multiple
-          value={selected}
-          onChange={handleChange}
-          renderValue={(selected) => selected.join(", ")}
-          MenuProps={MenuProps}
-        >
-          {attrNames.map((option) => (
-            <MenuItem onChange={handleCheckboxChange} key={option} value={option}>
-              <ListItemIcon>
-                <Checkbox checked={selected.indexOf(option) > -1} />
-              </ListItemIcon>
-              <ListItemText primary={option} />
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      <Table columns={columns} data={products} changeOrder={changeOrder} attributeTypes={attributeTypes} setFilter={setFilter}/>
+      <CheckboxList handleCheckboxChange={handleCheckboxChange} items={attrNames} />
+      <Table columns={columns} data={products} changeOrder={changeOrder} attributeTypes={attributeTypes} 
+        setFilter={setFilter} attributeRanges={attributeRanges} itemCheckboxHandler={itemCheckboxHandler} />
       <div className="pagination" hidden={!hasReceivedData}>
         <button onClick={goToFirstPage} ref={firstPageButton}>
           {'<<'}

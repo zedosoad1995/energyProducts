@@ -49,13 +49,13 @@ async function getProducts(req, res, next){
         const header = ProductsQuery.getHeader();
         const maxSize = await ProductsQuery.getNumRows();
         const attributeTypes = await ProductsQuery.getAttributeTypes();
-
-        console.log(await ProductsQuery.getAttributeRanges());
+        const attributeRanges = await ProductsQuery.getAttributeRanges();
 
         res.status(200).json({
             products,
             maxSize,
             attributeTypes,
+            attributeRanges,
             header,
             limit,
             offset

@@ -170,15 +170,13 @@ function getJoinQuery(attributesObj){
     }, '');
 }
 
-function getWhereQuery(attributesObj, filters){
+function getWhereQuery(filters){
     let whereQuery = filters.reduce((whereStr, filter) => {
 
         const [command, attr, ...vals] = filter;
 
         // TODO: deal with this case
         //if(!(attr in product)) return true;
-
-        const attrObj = attributesObj[attr];
 
         switch(command) {
             case 'between':
@@ -187,6 +185,7 @@ function getWhereQuery(attributesObj, filters){
 
                 break;
             case 'includes':
+                whereStr += `\`${attr}\` IN ('${vals[0].join(`', '`)}') AND `;
                 break
             default:
                 throw new Error(`Invalid command given: '${command}'.\n The valid commands are: 'between', 'includes'`);
@@ -204,7 +203,7 @@ function getWhereQuery(attributesObj, filters){
     return whereQuery;
 }
 
-function getOrderQuery(attributesObj, attributesToSort, order){
+function getOrderQuery(attributesToSort, order){
     let orderQuery = attributesToSort.reduce((orderStr, attr, i) => {
 
         orderStr += `\`${attr}\` ${order[i]}, `;
@@ -343,17 +342,24 @@ class ProductsQuery {
             });
     }
 
+    // TODO, make cnt of each val, and have a limit
     static async #getAllValuesInAttribute(attr){
         // TODO: pensar como lidar (deverei enviar erro?)
         if(!(attr in this.#attributesObj && ['String', 'Boolean'].includes(this.#attributesObj[attr]['dataType']))) return;
 
         const query = `
-            SELECT DISTINCT prods.\`${attr}\` as val
-            FROM (${this.#mainQuery}) prods`;
+            SELECT prods.\`${attr}\` as val, COUNT(prods.\`${attr}\`) AS cnt
+            FROM (${this.#mainQuery}) prods
+            GROUP BY prods.\`${attr}\`
+            ORDER BY cnt DESC`;
 
         return await dbQuery(query)
             .then(rows => {
-                return rows.map(row => row['val']);
+                return {
+                    values: rows.map(row => {
+                        return [row['val'], row['cnt']];
+                    })
+                };
             })
             .catch(error => {
                 throw(error);
@@ -402,13 +408,15 @@ class ProductsQuery {
         this.#attributesObj = await mergeRequestedAttributes(attributesToDisplay);
         const selects = getSelectQuery(this.#attributesObj);
         const joins = getJoinQuery(this.#attributesObj);
-        const wheres = getWhereQuery(this.#attributesObj, filters);
-        const orderBys = getOrderQuery(this.#attributesObj, attributesToSort, order);
+        const wheres = getWhereQuery(filters);
+        const orderBys = getOrderQuery(attributesToSort, order);
     
         return `
-            SELECT ${selects}
-            FROM products
-            ${joins}
+            SELECT prods.*
+            FROM 
+                (SELECT ${selects}
+                FROM products
+                ${joins}) prods
             WHERE ${wheres}
             ORDER BY ${orderBys}`;
     }
