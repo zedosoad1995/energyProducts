@@ -1,5 +1,4 @@
 import { makeStyles } from "@material-ui/core/styles";
-import { useRef, useEffect } from 'react';
 
 const useStyles = makeStyles((theme) => ({
   formControl: {

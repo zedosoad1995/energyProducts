@@ -44,43 +44,13 @@ const Styles = styled.div`
 `
 
 
-const Table = ({ columns, data, changeOrder, attributeTypes, setFilter, attributeRanges, itemCheckboxHandler }) => {
+const Table = ({ header, data, changeOrder, attributeTypes, setFilter, attributeRanges, itemCheckboxHandler }) => {
   // Use the state and functions returned from useTable to build your UI
-  const {
-    getTableProps,
-    getTableBodyProps,
-    getToggleHideAllColumnsProps,
-    prepareRow,
-    headerGroups,
-    allColumns,
-    rows
-  } = useTable(
-    {
-      columns,
-      data,
-      initialState: { pageIndex: 0 },
-    },
-    useSortBy
-  )
-
   const [orderCols, setOrderCols] = useState({});
 
-  const [columnsState, setColumnsState] = useState(columns);
+  const [headerState, setHeaderState] = useState(header);
 
-  const IndeterminateCheckbox = React.forwardRef(
-    ({ indeterminate, ...rest }, ref) => {
-      const defaultRef = React.useRef()
-      const resolvedRef = ref || defaultRef
-  
-      React.useEffect(() => {
-        resolvedRef.current.indeterminate = indeterminate
-      }, [resolvedRef, indeterminate])
-  
-      return <input type="checkbox" ref={resolvedRef} {...rest} />
-    }
-  )
-
-  function changeColumnOrder(event, column){
+  function changeColumnOrder(event){
     const key = event.currentTarget.getAttribute('name');
 
     let currOrder = {...orderCols};
@@ -105,7 +75,7 @@ const Table = ({ columns, data, changeOrder, attributeTypes, setFilter, attribut
   }
 
   useEffect(() => {
-    const columnNames = getColumnNames(columns, []);
+    const columnNames = header;
     
     let updatedOrderCols = {...orderCols};
 
@@ -122,24 +92,21 @@ const Table = ({ columns, data, changeOrder, attributeTypes, setFilter, attribut
     })
 
     setOrderCols(updatedOrderCols);
-  }, [columnsState]);
+  }, [headerState]);
 
   useEffect(() => {
-    if(!_.isEqual(columnsState, columns)){
-      setColumnsState(columns);
+    if(!_.isEqual(headerState, header)){
+      setHeaderState(header);
     }
   });
 
   // Render the UI for your table
   return (
     <>
+      {/*
       <div>
-        <div>
-          <IndeterminateCheckbox {...getToggleHideAllColumnsProps()} /> Toggle
-          All
-        </div>
-        {allColumns.map(column => (
-          <div className="checkbox" key={column.id}>
+        {headerState.map((column, i) => (
+          <div className="checkbox" key={i}>
             <label>
               <input type="checkbox" {...column.getToggleHiddenProps()} />{' '}
               {column.id}
@@ -148,36 +115,34 @@ const Table = ({ columns, data, changeOrder, attributeTypes, setFilter, attribut
         ))}
         <br />
       </div>
-      <table {...getTableProps()}>
+      */}
+      <table>
         <thead>
-          {headerGroups.map(headerGroup => (
-            <tr {...headerGroup.getHeaderGroupProps()}>
-              {headerGroup.headers.map((column, i) => (
-                <th onClick={(event) => changeColumnOrder(event, column)} idx={i} {...column.getHeaderProps()} name={column['Header']}>
-                  {column.render('Header')}       
-                  <span>
-                    {(column['Header'] in orderCols && 'isSorted' in orderCols[column['Header']] 
-                    && orderCols[column['Header']]['isSorted'])
-                      ? orderCols[column['Header']]['isSortedDesc']
-                        ? ' 🔽'
-                        : ' 🔼'
-                      : ''}
-                  </span>
-                  {/* fazer funcao que retorna os devidos filtros */}
-                  <div>{ (attributeTypes[column['Header']] === 'Number') ? minMaxFilter(setFilter(column['Header']), attributeRanges[column['Header']]) : 
-                                                                          listValues(itemCheckboxHandler(column['Header']), attributeRanges[column['Header']]) }</div>
-                </th>
-              ))}
-            </tr>
-          ))}
+          <tr key="header">
+            {header.map((column, i) => {
+              return (
+              <th onClick={(event) => changeColumnOrder(event)} idx={i} key={column} name={column}>
+                {column}      
+                <span>
+                  {(column in orderCols && 'isSorted' in orderCols[column] 
+                  && orderCols[column]['isSorted'])
+                    ? orderCols[column]['isSortedDesc']
+                      ? ' 🔽'
+                      : ' 🔼'
+                    : ''}
+                </span>
+                <div>{ (attributeTypes[column] === 'Number') ? minMaxFilter(setFilter(column), attributeRanges[column]) : 
+                                                                        listValues(itemCheckboxHandler(column), attributeRanges[column]) }</div>
+              </th>
+            )})}
+          </tr>
         </thead>
-        <tbody {...getTableBodyProps()}>
-          {rows.map((row, i) => {
-            prepareRow(row)
+        <tbody>
+          {data.map((row, i) => {
             return (
-              <tr {...row.getRowProps()}>
-                {row.cells.map(cell => {
-                  return <td {...cell.getCellProps()}>{cell.render('Cell')}</td>
+              <tr key={`row_${i}`}>
+                {Object.values(row).map((cell, col) => {
+                  return <td key={`row_${i}_col_${col}`}>{cell}</td>
                 })}
               </tr>
             )
@@ -201,7 +166,7 @@ function App(){
   });
 
   const [products, setProducts] = useState([]);
-  const [columns, setColumns] = useState([]);
+  const [header, setHeader] = useState([]);
   const [attributeTypes, setAttributeTypes] = useState([]);
   const [attributeRanges, setAttributeRanges] = useState({});
 
@@ -286,14 +251,14 @@ function App(){
     setOffset(offsetVal);
 
     getProducts(request, pageSize, offsetVal)
-    .then(({products, columns, maxSize, attributeTypes, attributeRanges}) => {
+    .then(({products, header, maxSize, attributeTypes, attributeRanges}) => {
 
       setProducts(products);
-      setColumns(columns);
+      setHeader(header);
       setAttributeTypes(attributeTypes);
       setAttributeRanges(attributeRanges);
 
-      if(columns.length > 0){
+      if(header.length > 0){
         setHasReceivedData(true);
       }
 
@@ -390,7 +355,7 @@ function App(){
   return (
     <Styles>
       <CheckboxList handleCheckboxChange={handleCheckboxChange} items={attrNames} />
-      <Table columns={columns} data={products} changeOrder={changeOrder} attributeTypes={attributeTypes} 
+      <Table header={header} data={products} changeOrder={changeOrder} attributeTypes={attributeTypes} 
         setFilter={setFilter} attributeRanges={attributeRanges} itemCheckboxHandler={itemCheckboxHandler} />
       <div className="pagination" hidden={!hasReceivedData}>
         <button onClick={goToFirstPage} ref={firstPageButton}>
