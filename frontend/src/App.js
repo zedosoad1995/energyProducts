@@ -5,6 +5,7 @@ import _ from 'lodash';
 
 import { CheckboxList } from './components/checkboxList.component';
 import { Table } from './components/table.component';
+import PaginationFooter from './components/paginationFooter.component';
 
 import { removeAttributeEffects } from "./utils";
 
@@ -67,6 +68,13 @@ function App(){
   const nextPageButton = useRef();
   const lastPageButton = useRef();
 
+  const paginationRefs = {
+    firstPageButton,
+    previousPageButton,
+    nextPageButton,
+    lastPageButton
+  };
+
   const [hasReceivedData, setHasReceivedData] = useState(false);
 
   const filterCheckboxHandler = (attr) => (event) => {
@@ -94,7 +102,7 @@ function App(){
     displayProducts(request, page, pageSize);
   }
 
-  const setFilter = (attr) => (val, valType) => {
+  const filterMinMaxHandler = (attr) => (val, valType) => {
     let newRequest = request;
 
     const idx = newRequest['filters'].findIndex(filter => filter[1] === attr);
@@ -140,7 +148,6 @@ function App(){
   }
 
   function displayProducts(request, page, pageSize){
-
     const offsetVal = (page - 1)*pageSize;
     setOffset(offsetVal);
 
@@ -157,10 +164,10 @@ function App(){
       }
 
       const totalPages = (maxSize > 0) ? Math.ceil(maxSize/pageSize) : 0;
+      setTotalPages(totalPages);
 
       setPageSize(pageSize);
       setPage(page);
-      setTotalPages(totalPages);
     })
     .catch(error => {
       console.log(error);
@@ -168,29 +175,13 @@ function App(){
   }
 
   useEffect(() => {
-    if(page === 1){
-      previousPageButton.current.disabled = true;
-      firstPageButton.current.disabled = true;
-    }else{
-      previousPageButton.current.disabled = false;
-      firstPageButton.current.disabled = false;
-    }
-
-    if(page >= totalPages){
-      nextPageButton.current.disabled = true;
-      lastPageButton.current.disabled = true;
-    }else{
-      nextPageButton.current.disabled = false;
-      lastPageButton.current.disabled = false;
-    } 
-  }, [page, totalPages])
-
-  useEffect(() => {
     displayProducts(request, page, pageSize);
+
     getAttrNames()
     .then(names => {
       setAttrNames(names.data);
     });
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -206,29 +197,7 @@ function App(){
     }
   }
 
-  function goToFirstPage(){
-    goToPage(1);
-  }
-
-  function goToLastPage(){
-    goToPage(totalPages);
-  }
-
-  function goToNextPage(){
-    goToPage(page + 1);
-  }
-
-  function goToPreviousPage(){
-    goToPage(page - 1);
-  }
-
-  function goToWrittenPage(event){
-    const page = event.target.value;
-
-    goToPage(Number(page));
-  }
-
-  function handleCheckboxChange(event){
+  function attributesCheckboxHandler(event){
     if(!('attributesToDisplay' in request)) return;
 
     const selectedAttr = event.currentTarget.getAttribute('data-value');
@@ -240,60 +209,27 @@ function App(){
         displayProducts(request, page, pageSize);
       }
     }else{
-      removeAttributeEffects(request, selectedAttr);
-      setRequest(request);
-      displayProducts(request, page, pageSize);
+      if(selectedAttr in request['attributesToDisplay']){
+        removeAttributeEffects(request, selectedAttr);
+        setRequest(request);
+        displayProducts(request, page, pageSize);
+      }
     }
+  }
+
+  function changePageSize(event){
+    const page = Math.floor(offset/Number(event.target.value)) + 1;
+    const pageSize = Number(event.target.value);  
+    displayProducts(request, page, pageSize);
   }
 
   return (
     <Styles>
-      <CheckboxList handleCheckboxChange={handleCheckboxChange} items={attrNames} />
+      <CheckboxList handleCheckboxChange={attributesCheckboxHandler} items={attrNames} />
       <Table header={header} data={products} displayNewColOrder={displayNewColOrder} attributeTypes={attributeTypes} 
-        setFilter={setFilter} attributeRanges={attributeRanges} filterCheckboxHandler={filterCheckboxHandler} />
-      <div className="pagination" hidden={!hasReceivedData}>
-        <button onClick={goToFirstPage} ref={firstPageButton}>
-          {'<<'}
-        </button>{' '}
-        <button onClick={goToPreviousPage} ref={previousPageButton}>
-            {'<'}
-          </button>{' '}
-        <button onClick={goToNextPage} ref={nextPageButton}>
-          {'>'}
-        </button>{' '}
-        <button onClick={goToLastPage} ref={lastPageButton}>
-          {'>>'}
-        </button>{' '}
-        <span>
-          Page{' '}
-          <strong>
-            {page} of {totalPages}
-          </strong>{' '}
-        </span>
-        <span>
-          | Go to page:{' '}
-          <input
-            type="number"
-            defaultValue={page}
-            onChange={goToWrittenPage}
-            style={{ width: '100px' }}
-          />
-        </span>{' '}
-        <select
-          value={pageSize}
-          onChange={e => {
-            const page = Math.floor(offset/Number(e.target.value)) + 1;
-            const pageSize = Number(e.target.value);  
-            displayProducts(request, page, pageSize);
-          }}
-        >
-          {[10, 20, 50, 100].map(pageSize => (
-            <option key={pageSize} value={pageSize}>
-              Show {pageSize}
-            </option>
-          ))}
-          </select>
-      </div>
+        filterMinMaxHandler={filterMinMaxHandler} attributeRanges={attributeRanges} filterCheckboxHandler={filterCheckboxHandler} />
+      <PaginationFooter goToPage={goToPage} page={page} totalPages={totalPages} hasReceivedData={hasReceivedData} 
+        pageSize={pageSize} changePageSize={changePageSize} ref={paginationRefs} />
     </Styles>
   )
 }

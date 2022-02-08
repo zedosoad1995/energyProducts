@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { minMaxFilter, listValues } from '../productTableComponents/minMaxFilter';
+import { useState } from "react";
+import { minMaxFilter, listValues } from '../productTableComponents/filters';
 import _ from 'lodash';
 
-export function Table({ header, data, displayNewColOrder, attributeTypes, setFilter, attributeRanges, filterCheckboxHandler }){
+export function Table({ header, data, displayNewColOrder, attributeTypes, filterMinMaxHandler, attributeRanges, filterCheckboxHandler }){
     const [columnOrderObj, setColumnOrderObj] = useState({});
     const [currHeader, setCurrHeader] = useState(header);
   
@@ -66,7 +66,7 @@ export function Table({ header, data, displayNewColOrder, attributeTypes, setFil
                         : ' 🔼'
                       : ''}
                   </span>
-                  <div>{ (attributeTypes[column] === 'Number') ? minMaxFilter(setFilter(column), attributeRanges[column]) : 
+                  <div>{ (attributeTypes[column] === 'Number') ? minMaxFilter(filterMinMaxHandler(column), attributeRanges[column]) : 
                                                                 listValues(filterCheckboxHandler(column), attributeRanges[column]) }
                     </div>
                 </th>
