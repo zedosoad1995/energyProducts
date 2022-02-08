@@ -40,20 +40,6 @@ const MenuProps = {
   variant: "menu"
 };
 
-function getColumnNames(columns, columnNames = []){
-  for(let i = 0; i < columns.length; i++){
-      const obj = columns[i];
-
-      if('columns' in obj){
-          getColumnNames(obj['columns'], columnNames);
-      }else if('accessor' in obj){
-          columnNames.push(obj['accessor']);
-      }
-  }
-
-  return columnNames;
-}
-
 function removeAttributeEffects(request, attr){
   const idxAttrToDisplay = request['attributesToDisplay'].indexOf(attr);
   if (idxAttrToDisplay !== -1) {
@@ -74,4 +60,4 @@ function removeAttributeEffects(request, attr){
   return request;
 }
 
-export { useStyles, MenuProps, getColumnNames, removeAttributeEffects };
+export { useStyles, MenuProps, removeAttributeEffects };

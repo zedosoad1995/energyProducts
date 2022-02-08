@@ -20,7 +20,7 @@
         "productJoinField": "reviewsID",
         "dataType": "Number"
     },
-    "Num Reviews": {
+    "Num. Reviews": {
         "fieldName": "numReviews",
         "table": "reviews",
         "tableAlias": "reviews",

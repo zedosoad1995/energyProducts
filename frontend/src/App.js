@@ -1,14 +1,12 @@
 import React, { useState, useRef, useEffect, forwardRef } from 'react';
-import { useTable, usePagination, useSortBy } from 'react-table';
 import styled from 'styled-components';
 import { getProducts, getAttrNames } from './services/product.service';
 import _ from 'lodash';
 
 import { CheckboxList } from './components/checkboxList.component';
+import { Table } from './components/table.component';
 
-import { getColumnNames, removeAttributeEffects } from "./utils";
-
-import { minMaxFilter, listValues } from './productTableComponents/minMaxFilter';
+import { removeAttributeEffects } from "./utils";
 
 const Styles = styled.div`
   padding: 1rem;
@@ -41,125 +39,14 @@ const Styles = styled.div`
   .checkbox {
     display: inline-block;
   }
-`
-
-
-const Table = ({ header, data, changeOrder, attributeTypes, setFilter, attributeRanges, itemCheckboxHandler }) => {
-  // Use the state and functions returned from useTable to build your UI
-  const [orderCols, setOrderCols] = useState({});
-
-  const [headerState, setHeaderState] = useState(header);
-
-  function changeColumnOrder(event){
-    const key = event.currentTarget.getAttribute('name');
-
-    let currOrder = {...orderCols};
-    if(!currOrder[key]['isSorted']){
-      currOrder[key]['isSorted'] = !currOrder[key]['isSorted'];
-
-      changeOrder(key, 'ASC');
-
-    }else if(!currOrder[key]['isSortedDesc']){
-      currOrder[key]['isSortedDesc'] = !currOrder[key]['isSortedDesc'];
-
-      changeOrder(key, 'DESC');
-
-    }else{
-      currOrder[key]['isSorted'] = false
-      currOrder[key]['isSortedDesc'] = false
-
-      changeOrder(key);
-    }
-
-    setOrderCols(currOrder);
-  }
-
-  useEffect(() => {
-    const columnNames = header;
-    
-    let updatedOrderCols = {...orderCols};
-
-    columnNames.forEach(newCol => {
-      if(!(newCol in updatedOrderCols)){
-        updatedOrderCols[newCol] = {isSorted: false, isSortedDesc: false};
-      }
-    });
-
-    Object.keys(orderCols).forEach(prevCol => {
-      if(!columnNames.includes(prevCol)){
-        delete updatedOrderCols[prevCol];
-      }
-    })
-
-    setOrderCols(updatedOrderCols);
-  }, [headerState]);
-
-  useEffect(() => {
-    if(!_.isEqual(headerState, header)){
-      setHeaderState(header);
-    }
-  });
-
-  // Render the UI for your table
-  return (
-    <>
-      {/*
-      <div>
-        {headerState.map((column, i) => (
-          <div className="checkbox" key={i}>
-            <label>
-              <input type="checkbox" {...column.getToggleHiddenProps()} />{' '}
-              {column.id}
-            </label>
-          </div>
-        ))}
-        <br />
-      </div>
-      */}
-      <table>
-        <thead>
-          <tr key="header">
-            {header.map((column, i) => {
-              return (
-              <th onClick={(event) => changeColumnOrder(event)} idx={i} key={column} name={column}>
-                {column}      
-                <span>
-                  {(column in orderCols && 'isSorted' in orderCols[column] 
-                  && orderCols[column]['isSorted'])
-                    ? orderCols[column]['isSortedDesc']
-                      ? ' 🔽'
-                      : ' 🔼'
-                    : ''}
-                </span>
-                <div>{ (attributeTypes[column] === 'Number') ? minMaxFilter(setFilter(column), attributeRanges[column]) : 
-                                                                        listValues(itemCheckboxHandler(column), attributeRanges[column]) }</div>
-              </th>
-            )})}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, i) => {
-            return (
-              <tr key={`row_${i}`}>
-                {Object.values(row).map((cell, col) => {
-                  return <td key={`row_${i}_col_${col}`}>{cell}</td>
-                })}
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </>
-    
-  )
-};
+`;
 
 function App(){
   const [attrNames, setAttrNames] = useState([]);
 
   const [request, setRequest] = useState({
     // TODO: does not accept names with a ".". Find a way to make that work
-    attributesToDisplay: ['Name', 'Distributor', 'Category', 'Altura', 'Rating', 'Num Reviews', 'Peso'],
+    attributesToDisplay: ['Name', 'Distributor', 'Category', 'Altura', 'Rating', 'Num. Reviews', 'Peso'],
     attributesToSort: [],
     order: [],
     filters: []
@@ -224,25 +111,27 @@ function App(){
     displayProducts(newRequest, page, pageSize);
   }
 
-  function changeOrder(attr, order){
-    let newRequest = request;
-
+  function displayNewColOrder(attr, order){
     if(order === 'ASC'){
-      newRequest.attributesToSort.push(attr);
-      newRequest.order.push('ASC');
+      request.attributesToSort.push(attr);
+      request.order.push('ASC');
 
     }else if(order === 'DESC'){
-      const idx = newRequest.attributesToSort.indexOf(attr);
-      newRequest.order[idx] = 'DESC';
+      const idx = request.attributesToSort.indexOf(attr);
+      if(idx > -1)
+        request.order[idx] = 'DESC';
 
     }else{
-      const idx = newRequest.attributesToSort.indexOf(attr);
-      newRequest.attributesToSort.splice(idx, 1);
-      newRequest.order.splice(idx, 1);
+      // Remove order
+      const idx = request.attributesToSort.indexOf(attr);
+      if(idx > -1){
+        request.attributesToSort.splice(idx, 1);
+        request.order.splice(idx, 1);
+      }
     }
 
-    setRequest(newRequest);
-    displayProducts(newRequest, page, pageSize);
+    setRequest(request);
+    displayProducts(request, page, pageSize);
   }
 
   function displayProducts(request, page, pageSize){
@@ -355,7 +244,7 @@ function App(){
   return (
     <Styles>
       <CheckboxList handleCheckboxChange={handleCheckboxChange} items={attrNames} />
-      <Table header={header} data={products} changeOrder={changeOrder} attributeTypes={attributeTypes} 
+      <Table header={header} data={products} displayNewColOrder={displayNewColOrder} attributeTypes={attributeTypes} 
         setFilter={setFilter} attributeRanges={attributeRanges} itemCheckboxHandler={itemCheckboxHandler} />
       <div className="pagination" hidden={!hasReceivedData}>
         <button onClick={goToFirstPage} ref={firstPageButton}>
