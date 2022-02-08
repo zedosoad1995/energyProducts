@@ -45,7 +45,6 @@ function App(){
   const [attrNames, setAttrNames] = useState([]);
 
   const [request, setRequest] = useState({
-    // TODO: does not accept names with a ".". Find a way to make that work
     attributesToDisplay: ['Name', 'Distributor', 'Category', 'Altura', 'Rating', 'Num. Reviews', 'Peso'],
     attributesToSort: [],
     order: [],
@@ -70,23 +69,29 @@ function App(){
 
   const [hasReceivedData, setHasReceivedData] = useState(false);
 
-  const itemCheckboxHandler = (attr) => (val) => {
-    let newRequest = request;
+  const filterCheckboxHandler = (attr) => (event) => {
+    const isChecked = event.target.checked;
 
-    val = val.currentTarget.getAttribute('data-value');
+    const value = event.currentTarget.getAttribute('data-value');
 
     if(!('attributesToDisplay' in request)) return;
 
-    const idx = newRequest['filters'].findIndex(filter => filter[1] === attr);
+    const idx = request['filters'].findIndex(filter => filter[1] === attr);
 
-    if(idx === -1){
-      newRequest['filters'].push(['includes', attr, [val]]);
+    if(isChecked){
+      if(idx === -1){
+        request['filters'].push(['includes', attr, [value]]);
+      }else{
+        request['filters'][idx][2].concat(value);
+      }
     }else{
-      newRequest['filters'].push(['includes', attr, newRequest['filters'][idx][2].concat(val)]);
+      if(idx > -1){
+        request['filters'].splice(idx, 1);
+      }
     }
 
-    setRequest(newRequest);
-    displayProducts(newRequest, page, pageSize);
+    setRequest(request);
+    displayProducts(request, page, pageSize);
   }
 
   const setFilter = (attr) => (val, valType) => {
@@ -245,7 +250,7 @@ function App(){
     <Styles>
       <CheckboxList handleCheckboxChange={handleCheckboxChange} items={attrNames} />
       <Table header={header} data={products} displayNewColOrder={displayNewColOrder} attributeTypes={attributeTypes} 
-        setFilter={setFilter} attributeRanges={attributeRanges} itemCheckboxHandler={itemCheckboxHandler} />
+        setFilter={setFilter} attributeRanges={attributeRanges} filterCheckboxHandler={filterCheckboxHandler} />
       <div className="pagination" hidden={!hasReceivedData}>
         <button onClick={goToFirstPage} ref={firstPageButton}>
           {'<<'}
