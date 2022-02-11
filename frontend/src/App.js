@@ -84,17 +84,24 @@ function App(){
 
     if(!('attributesToDisplay' in request)) return;
 
-    const idx = request['filters'].findIndex(filter => filter[1] === attr);
+    const idxFilter = request['filters'].findIndex(filter => filter[1] === attr && filter[0] === 'includes');
 
     if(isChecked){
-      if(idx === -1){
+      if(idxFilter === -1){
         request['filters'].push(['includes', attr, [value]]);
       }else{
-        request['filters'][idx][2].concat(value);
+        request['filters'][idxFilter][2].push(value);
       }
     }else{
-      if(idx > -1){
-        request['filters'].splice(idx, 1);
+      if(idxFilter > -1){
+        const idxValue = request['filters'][idxFilter][2].findIndex(val => val === value);
+        if(idxValue > -1){
+          request['filters'][idxFilter][2].splice(idxValue, 1);
+          
+          if(request['filters'][idxFilter][2].length === 0){
+            request['filters'].splice(idxFilter, 1);
+          }
+        }
       }
     }
 

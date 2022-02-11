@@ -45,22 +45,6 @@ async function errorHandling_getProductsToDisplay(attributesToDisplay, attribute
         throw new Error(`'attributesToDisplay' contains attributes that to not exist in the DB: ${invalidAttributeNames.join(', ')}`);*/
 }
 
-async function getDatatype(attributes){
-    const query = `
-        SELECT DISTINCT attributeName, datatype
-        FROM productAttributes
-        WHERE attributeName IN ('${attributes.join(`', '`)}');`;
-
-    return dbQuery(query)
-            .then(rows => rows.reduce((obj, row) => {
-                obj[row['attributeName']] = row['datatype'];
-                return obj;
-            }, {}))
-            .catch(error => {
-                throw(error);
-            });
-}
-
 async function getProductAttrNames(){
     const query = `
         SELECT DISTINCT attributeName, datatype
@@ -220,73 +204,14 @@ function getOrderQuery(attributesToSort, order){
     return orderQuery;
 }
 
-function sortProducts(products, attributesToSort, order){
-    if(!attributesToSort || !order || order.length === 0) return products;
-
-    const sortNameToVal = {
-        ASC: 1,
-        DESC: -1
-    };
-
-    return products.sort((prod1, prod2) => {
-        for(let i = 0; i < order.length; i++){
-            const attribute = attributesToSort[i];
-
-            if(prod1[attribute] > prod2[attribute]) return sortNameToVal[order[i]];
-            if(prod1[attribute] < prod2[attribute]) return -sortNameToVal[order[i]];
-        }
-    });
-}
-
-// TODO: Middleware???
-function correctProdAttr(product){
-    if('Altura' in product){
-        // It probably is in mm -> convert to cm
-        if(product['Altura'] > 200){
-            product['Altura'] /= 10;
-        }
-    }
-    return product;
-}
-
-// between: [command:between, attr, val:min, val:max]
-// greater: [command:greater(equal), attr, val:min]
-// less: [command:less(equal), attr, val:max]
-// includes: [command:includes, attr, string[]]
-// not includes: [command:notincludes, attr, string[]]
-// TODO: error quando o atributo nao existe
-function canFilterProduct(product, filters){
-    if(!filters) return true;
-
-    return filters.every(filter => {
-            const [command, attr, ...vals] = filter;
-
-            // TODO: deal with this case
-            if(!(attr in product)) return true;
-
-            switch(command) {
-                case 'between':
-                    return product[attr] >= vals[0] && product[attr] <= vals[1];
-                case 'greater':
-                    return product[attr] >= vals[0];
-                case 'less':
-                    return product[attr] <= vals[0];
-                case 'includes':
-                    return vals[0].includes(product[attr]);
-                case 'not includes':
-                    return !vals[0].includes(product[attr]);
-                default:
-                    throw new Error(`Invalid command given: '${command}'.\n The valid commands are: 'between', 'greater', 'less', 'includes', and 'not includes'`);
-            }
-        });
-}
-
 class ProductsQuery {
 
     static #mainQuery;
     static #attributesObj;
+    static #mainQueryNoFilter;
 
     constructor(){
+        // Silence is key
     }
 
     static async initializeMainQuery(request){
@@ -294,7 +219,7 @@ class ProductsQuery {
 
         await errorHandling_getProductsToDisplay(attributesToDisplay, attributesToSort, order, filters);
 
-        this.#mainQuery = await this.#getQuery(attributesToDisplay, filters, attributesToSort, order);
+        [this.#mainQuery, this.#mainQueryNoFilter] = await this.#getQuery(attributesToDisplay, filters, attributesToSort, order);
     }
 
     static async getProducts(limit = 10, offset = 0){
@@ -343,14 +268,28 @@ class ProductsQuery {
     }
 
     // TODO, make cnt of each val, and have a limit
-    static async #getAllValuesInAttribute(attr){
+    static async #getAllStringsInAttribute(attr){
         // TODO: pensar como lidar (deverei enviar erro?)
         if(!(attr in this.#attributesObj && ['String', 'Boolean'].includes(this.#attributesObj[attr]['dataType']))) return;
 
         const query = `
-            SELECT prods.\`${attr}\` as val, COUNT(prods.\`${attr}\`) AS cnt
-            FROM (${this.#mainQuery}) prods
-            GROUP BY prods.\`${attr}\`
+            SELECT t_allValues.val, 
+                CASE
+                    WHEN t_filtered.val IS NULL THEN 0
+                    ELSE t_filtered.cnt 
+                END AS cnt
+            FROM
+                (
+                    SELECT DISTINCT prodsNoFilter.\`${attr}\` AS val
+                    FROM (${this.#mainQueryNoFilter}) prodsNoFilter
+                ) t_allValues
+            LEFT JOIN
+                (
+                    SELECT prodsFiltered.\`${attr}\` AS val, COUNT(prodsFiltered.\`${attr}\`) AS cnt
+                    FROM (${this.#mainQuery}) prodsFiltered
+                    GROUP BY prodsFiltered.\`${attr}\`
+                ) t_filtered
+            ON t_filtered.val = t_allValues.val
             ORDER BY cnt DESC`;
 
         return await dbQuery(query)
@@ -372,7 +311,7 @@ class ProductsQuery {
         switch(this.#attributesObj[attr]['dataType']) {
             case 'String':
             case 'Boolean':
-                return this.#getAllValuesInAttribute(attr);
+                return this.#getAllStringsInAttribute(attr);
             case 'Number':
                 return this.#getMinMax(attr);
             default:
@@ -410,15 +349,19 @@ class ProductsQuery {
         const joins = getJoinQuery(this.#attributesObj);
         const wheres = getWhereQuery(filters);
         const orderBys = getOrderQuery(attributesToSort, order);
-    
-        return `
+
+        const queryNoFilter = `
             SELECT prods.*
             FROM 
                 (SELECT ${selects}
                 FROM products
-                ${joins}) prods
+                ${joins}) prods`;
+    
+        return [
+            `${queryNoFilter}
             WHERE ${wheres}
-            ORDER BY ${orderBys}`;
+            ORDER BY ${orderBys}`, 
+            queryNoFilter];
     }
 }
 
