@@ -66,7 +66,7 @@ export function Table({ header, data, displayNewColOrder, attributeTypes, filter
                         : ' 🔼'
                       : ''}
                   </span>
-                  <div>{ (attributeTypes[column] === 'Number') ? minMaxFilter(filterMinMaxHandler(column), attributeRanges[column]) : 
+                  <div onClick={(e) => e.stopPropagation()}>{ (attributeTypes[column] === 'Number') ? minMaxFilter(filterMinMaxHandler(column), attributeRanges[column]) : 
                                                                 listValues(filterCheckboxHandler(column), attributeRanges[column]) }
                     </div>
                 </th>
