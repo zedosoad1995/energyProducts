@@ -56,32 +56,32 @@ function PaginationFooter({goToPage, page, totalPages, hasReceivedData, pageSize
                 <button onClick={goToLastPage} ref={ref.lastPageButton}>
                 {'>>'}
                 </button>{' '}
+                <span>
+                    Page{' '}
+                    <strong>
+                    {page} of {totalPages}
+                    </strong>{' '}
+                </span>
+                <span>
+                |   Go to page:{' '}
+                    <input
+                        type="number"
+                        defaultValue={page}
+                        onChange={goToWrittenPage}
+                        style={{ width: '100px' }}
+                    />
+                </span>{' '}
+                <select
+                    value={pageSize}
+                    onChange={changePageSize}
+                >
+                    {[10, 20, 50, 100].map(pageSize => (
+                        <option key={pageSize} value={pageSize}>
+                        Show {pageSize}
+                        </option>
+                    ))}
+                </select>
             </div>
-            <span>
-                Page{' '}
-                <strong>
-                {page} of {totalPages}
-                </strong>{' '}
-            </span>
-            <span>
-            |   Go to page:{' '}
-                <input
-                    type="number"
-                    defaultValue={page}
-                    onChange={goToWrittenPage}
-                    style={{ width: '100px' }}
-                />
-            </span>{' '}
-            <select
-                value={pageSize}
-                onChange={changePageSize}
-            >
-                {[10, 20, 50, 100].map(pageSize => (
-                    <option key={pageSize} value={pageSize}>
-                    Show {pageSize}
-                    </option>
-                ))}
-            </select>
       </>
     );
 }

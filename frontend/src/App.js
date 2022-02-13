@@ -60,6 +60,10 @@ function App(){
   const [pageSize, setPageSize] = useState(10);
   const [offset, setOffset] = useState(0);
 
+  const [totalResults, setTotalResults] = useState(0);
+
+  const [loading, setLoading] = useState(false);
+
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
 
@@ -158,13 +162,18 @@ function App(){
     const offsetVal = (page - 1)*pageSize;
     setOffset(offsetVal);
 
+    setLoading(true);
+
     getProducts(request, pageSize, offsetVal)
     .then(({products, header, maxSize, attributeTypes, attributeRanges}) => {
+      setLoading(false);
 
       setProducts(products);
       setHeader(header);
       setAttributeTypes(attributeTypes);
       setAttributeRanges(attributeRanges);
+
+      setTotalResults(maxSize);
 
       if(header.length > 0){
         setHasReceivedData(true);
@@ -234,8 +243,9 @@ function App(){
   return (
     <Styles>
       <CheckboxList handleCheckboxChange={attributesCheckboxHandler} items={attrNames} selectedItems={header} orderByName={true} />
-      <Table header={header} data={products} displayNewColOrder={displayNewColOrder} attributeTypes={attributeTypes} 
-        filterMinMaxHandler={filterMinMaxHandler} attributeRanges={attributeRanges} filterCheckboxHandler={filterCheckboxHandler} />
+      <Table header={header} data={products} attrToSort={request.attributesToSort} displayNewColOrder={displayNewColOrder} 
+        attributeTypes={attributeTypes} filterMinMaxHandler={filterMinMaxHandler} attributeRanges={attributeRanges} 
+        filterCheckboxHandler={filterCheckboxHandler} totalResults={totalResults} loading={loading} />
       <PaginationFooter goToPage={goToPage} page={page} totalPages={totalPages} hasReceivedData={hasReceivedData} 
         pageSize={pageSize} changePageSize={changePageSize} ref={paginationRefs} />
     </Styles>

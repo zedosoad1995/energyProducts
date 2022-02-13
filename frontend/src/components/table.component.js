@@ -2,7 +2,8 @@ import { useState } from "react";
 import { minMaxFilter, listValues } from '../productTableComponents/filters';
 import _ from 'lodash';
 
-export function Table({ header, data, displayNewColOrder, attributeTypes, filterMinMaxHandler, attributeRanges, filterCheckboxHandler }){
+export function Table({ header, data, attrToSort, displayNewColOrder, attributeTypes, filterMinMaxHandler, attributeRanges, 
+                      filterCheckboxHandler, totalResults, loading }){
     const [columnOrderObj, setColumnOrderObj] = useState({});
     const [currHeader, setCurrHeader] = useState(header);
   
@@ -47,6 +48,21 @@ export function Table({ header, data, displayNewColOrder, attributeTypes, filter
     
         setColumnOrderObj(columnOrderObj);
     }
+
+    function getSortSymbol(column){
+
+      const idx = attrToSort.indexOf(column);
+
+      if(idx > -1 && 'isSorted' in columnOrderObj[column] && columnOrderObj[column]['isSorted']){
+        if(columnOrderObj[column]['isSortedDesc']){
+          return ` 🔽 ${idx + 1}`; 
+        }else{
+          return ` 🔼 ${idx + 1}`; 
+        }
+      }
+        
+      return '';
+    }
   
     return (
       <>
@@ -59,16 +75,13 @@ export function Table({ header, data, displayNewColOrder, attributeTypes, filter
                 <th onClick={(event) => changeColumnOrder(event)} key={column} name={column}>
                   {column}      
                   <span>
-                    {(column in columnOrderObj && 'isSorted' in columnOrderObj[column] 
-                    && columnOrderObj[column]['isSorted'])
-                      ? columnOrderObj[column]['isSortedDesc']
-                        ? ' 🔽'
-                        : ' 🔼'
-                      : ''}
+                    {getSortSymbol(column)}
                   </span>
-                  <div onClick={(e) => e.stopPropagation()}>{ (attributeTypes[column] === 'Number') ? minMaxFilter(filterMinMaxHandler(column), attributeRanges[column]) : 
-                                                                listValues(filterCheckboxHandler(column), attributeRanges[column]) }
-                    </div>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    { (attributeTypes[column] === 'Number') ? 
+                      minMaxFilter(filterMinMaxHandler(column), attributeRanges[column]) : 
+                      listValues(filterCheckboxHandler(column), attributeRanges[column]) }
+                  </div>
                 </th>
               )})}
 
@@ -84,6 +97,16 @@ export function Table({ header, data, displayNewColOrder, attributeTypes, filter
                 </tr>
               )
             })}
+            <tr>
+              {loading ? (
+                <td colSpan="10000">Loading...</td>
+              ) : (
+                <td colSpan="10000">
+                  Showing {data.length} of {totalResults}{' '}
+                  results
+                </td>
+              )}
+            </tr>
           </tbody>
         </table>
       </>
