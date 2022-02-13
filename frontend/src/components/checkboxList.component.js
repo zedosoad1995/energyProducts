@@ -5,20 +5,44 @@ import ListItemText from "@material-ui/core/ListItemText";
 import MenuItem from "@material-ui/core/MenuItem";
 import FormControl from "@material-ui/core/FormControl";
 import Select from "@material-ui/core/Select";
+import _ from 'lodash';
 
 import { useState } from 'react';
 
 import { MenuProps, useStyles } from "../utils";
 
-export function CheckboxList({handleCheckboxChange, items}){
+export function CheckboxList({handleCheckboxChange, items, selectedItems, orderByName=false}){
 
     const classes = useStyles();
     const [selected, setSelected] = useState([]);
+
+    // Only load on the 1st time it has an array with length > 0
+    if(!_.isEqual(selectedItems, selected) && selectedItems && selected.length === 0){
+        setSelected(selectedItems);
+    }
 
     function handleChange(event){
         const value = event.target.value;
         setSelected(value);
     };
+
+    function sortList(a, b){
+        if(selected.length > 0){
+            if(!selected.includes(a) && selected.includes(b)){
+                return 1;
+            }else if(selected.includes(a) && !selected.includes(b)){
+                return -1;
+            }
+        }
+        if(a > b){
+            return 1;
+        }else if(a < b){
+            return -1;
+        }
+        return 0;
+    }
+
+    if(orderByName) items.sort(sortList);
 
     return (
         <FormControl className={classes.formControl}>

@@ -184,7 +184,7 @@ function App(){
   useEffect(() => {
     displayProducts(request, page, pageSize);
 
-    getAttrNames()
+    getAttrNames(request['attributesToDisplay'])
     .then(names => {
       setAttrNames(names.data);
     });
@@ -210,13 +210,14 @@ function App(){
     const selectedAttr = event.currentTarget.getAttribute('data-value');
 
     if(event.target.checked){
-      if(!(selectedAttr in request['attributesToDisplay'])){
+      if(!request['attributesToDisplay'].includes(selectedAttr)){
         request['attributesToDisplay'].push(selectedAttr);
         setRequest(request);
         displayProducts(request, page, pageSize);
       }
     }else{
-      if(selectedAttr in request['attributesToDisplay']){
+      if(request['attributesToDisplay'].includes(selectedAttr)){
+        console.log(selectedAttr, request['attributesToDisplay']);
         removeAttributeEffects(request, selectedAttr);
         setRequest(request);
         displayProducts(request, page, pageSize);
@@ -232,7 +233,7 @@ function App(){
 
   return (
     <Styles>
-      <CheckboxList handleCheckboxChange={attributesCheckboxHandler} items={attrNames} />
+      <CheckboxList handleCheckboxChange={attributesCheckboxHandler} items={attrNames} selectedItems={header} orderByName={true} />
       <Table header={header} data={products} displayNewColOrder={displayNewColOrder} attributeTypes={attributeTypes} 
         filterMinMaxHandler={filterMinMaxHandler} attributeRanges={attributeRanges} filterCheckboxHandler={filterCheckboxHandler} />
       <PaginationFooter goToPage={goToPage} page={page} totalPages={totalPages} hasReceivedData={hasReceivedData} 

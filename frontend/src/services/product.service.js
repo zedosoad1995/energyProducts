@@ -8,6 +8,6 @@ export async function getProducts(request, limit, offset){
     return {products, header, maxSize, attributeTypes, attributeRanges};
 }
 
-export async function getAttrNames(limit, offset){
+export async function getAttrNames(){
     return axios.get(`http://localhost:8000/api/productAttrNames`);
 }
