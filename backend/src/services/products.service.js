@@ -165,7 +165,16 @@ function getWhereQuery(filters){
         switch(command) {
             case 'between':
                 const [minVal, maxVal] = vals;
-                whereStr += `\`${attr}\` >= ${minVal} AND \`${attr}\` <= ${maxVal} AND `;
+
+                if(!minVal && maxVal){
+                    whereStr += `\`${attr}\` <= ${maxVal} AND `;
+                }else if(minVal && !maxVal){
+                    whereStr += `\`${attr}\` >= ${minVal} AND `;
+                }else if(minVal && maxVal){
+                    if(minVal > maxVal) break;
+
+                    whereStr += `\`${attr}\` >= ${minVal} AND \`${attr}\` <= ${maxVal} AND `;
+                }
 
                 break;
             case 'includes':

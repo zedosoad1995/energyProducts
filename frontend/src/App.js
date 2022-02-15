@@ -119,15 +119,24 @@ function App(){
     const idx = newRequest['filters'].findIndex(filter => filter[1] === attr);
     if(idx === -1){
       if(valType === 'min'){
-        newRequest['filters'].push(['between', attr, val, 99999999]);
+        newRequest['filters'].push(['between', attr, val, null]);
       }else if(valType === 'max'){
-        newRequest['filters'].push(['between', attr, -9999999999, val]);
+        newRequest['filters'].push(['between', attr, null, val]);
+      }
+
+      const lastIdx = newRequest['filters'].length - 1;
+      if(newRequest['filters'][lastIdx][2] === null && newRequest['filters'][lastIdx][3] === null){
+        newRequest['filters'].splice(lastIdx, 1);
       }
     }else{
       if(valType === 'min'){
         newRequest['filters'][idx][2] = val;
       }else if(valType === 'max'){
         newRequest['filters'][idx][3] = val;
+      }
+
+      if(newRequest['filters'][idx][2] === null && newRequest['filters'][idx][3] === null){
+        newRequest['filters'].splice(idx, 1);
       }
     }
 

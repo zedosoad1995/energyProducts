@@ -4,6 +4,7 @@ export function minMaxFilter(setFilter, attributeRanges){
     if(!(attributeRanges && 'min' in attributeRanges && 'max' in attributeRanges)) return null;
 
     return (
+        <>
         <div
             style={{
                 display: 'flex',
@@ -12,7 +13,8 @@ export function minMaxFilter(setFilter, attributeRanges){
         <input
             type="number"
             onChange={e => {
-                setFilter(Number(e.target.value), 'min');
+                const val = (e.target.value) ? Number(e.target.value) : null;
+                setFilter(val, 'min');
             }}
             placeholder={`${attributeRanges['min']}`}
             style={{
@@ -24,7 +26,8 @@ export function minMaxFilter(setFilter, attributeRanges){
         <input
             type="number"
             onChange={e => {
-                setFilter(Number(e.target.value), 'max');
+                const val = (e.target.value) ? Number(e.target.value) : null;
+                setFilter(val, 'max');
             }}
             placeholder={`${attributeRanges['max']}`}
             style={{
@@ -33,6 +36,11 @@ export function minMaxFilter(setFilter, attributeRanges){
             }}
         />
         </div>
+        <div>
+            <input type="checkbox" id="hasNull"/>
+            <label for="hasNull"> null</label>
+        </div>
+        </>
     )
 }
 
