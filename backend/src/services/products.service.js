@@ -166,22 +166,43 @@ function getWhereQuery(filters){
             case 'between':
                 const [minVal, maxVal] = vals;
 
-                if(!minVal && maxVal){
-                    whereStr += `\`${attr}\` <= ${maxVal} AND `;
-                }else if(minVal && !maxVal){
-                    whereStr += `\`${attr}\` >= ${minVal} AND `;
-                }else if(minVal && maxVal){
+                if(minVal === null && maxVal === null) break;
+
+                let currWhereStr = '';
+
+                if(minVal === null && maxVal !== null){
+                    currWhereStr = `\`${attr}\` <= ${maxVal}`;
+                }else if(minVal !== null && maxVal === null){
+                    currWhereStr = `\`${attr}\` >= ${minVal}`;
+                }else if(minVal !== null && maxVal !== null){
                     if(minVal > maxVal) break;
 
-                    whereStr += `\`${attr}\` >= ${minVal} AND \`${attr}\` <= ${maxVal} AND `;
+                    currWhereStr = `\`${attr}\` >= ${minVal} AND \`${attr}\` <= ${maxVal}`;
                 }
+
+                const canContainNull = filters.some(filter => filter[1] === attr && filter[0] === 'isNull');
+
+                if(canContainNull){
+                    currWhereStr = `(${currWhereStr} OR \`${attr}\` IS NULL)`;
+                }
+
+                whereStr += currWhereStr + ' AND ';
 
                 break;
             case 'includes':
-                whereStr += `\`${attr}\` IN ('${vals[0].join(`', '`)}') AND `;
+                if(vals[0].includes('null')){
+                    if(vals[0].length === 1){
+                        whereStr += `\`${attr}\` IS NULL AND `;
+                    }else{
+                        whereStr += `(\`${attr}\` IN ('${vals[0].join(`', '`)}') OR \`${attr}\` IS NULL) AND `;
+                    }
+                }else{
+                    whereStr += `\`${attr}\` IN ('${vals[0].join(`', '`)}') AND `;
+                }
+
                 break
             default:
-                throw new Error(`Invalid command given: '${command}'.\n The valid commands are: 'between', 'includes'`);
+                //throw new Error(`Invalid command given: '${command}'.\n The valid commands are: 'between', 'includes'`);
         }
 
         return whereStr;
@@ -291,12 +312,23 @@ class ProductsQuery {
                 (
                     SELECT DISTINCT prodsNoFilter.\`${attr}\` AS val
                     FROM (${this.#mainQueryNoFilter}) prodsNoFilter
+                    WHERE prodsNoFilter.\`${attr}\` IS NOT NULL
+                    UNION
+                    SELECT "null"
                 ) t_allValues
             LEFT JOIN
                 (
-                    SELECT prodsFiltered.\`${attr}\` AS val, COUNT(prodsFiltered.\`${attr}\`) AS cnt
-                    FROM (${this.#mainQuery}) prodsFiltered
-                    GROUP BY prodsFiltered.\`${attr}\`
+                    SELECT prodsFiltered.val AS val, COUNT(prodsFiltered.val) AS cnt
+                    FROM
+                    (
+                        SELECT
+                            CASE
+                                WHEN prodsFiltered_.\`${attr}\` IS NULL THEN "null"
+                                ELSE prodsFiltered_.\`${attr}\` 
+                            END AS val
+                        FROM (${this.#mainQuery}) prodsFiltered_
+                    ) prodsFiltered
+                    GROUP BY prodsFiltered.val
                 ) t_filtered
             ON t_filtered.val = t_allValues.val
             ORDER BY cnt DESC`;

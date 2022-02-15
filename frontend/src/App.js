@@ -110,38 +110,52 @@ function App(){
     }
 
     setRequest(request);
-    displayProducts(request, page, pageSize);
+    displayProducts(request, 1, pageSize);
   }
 
-  const filterMinMaxHandler = (attr) => (val, valType) => {
-    let newRequest = request;
-
-    const idx = newRequest['filters'].findIndex(filter => filter[1] === attr);
+  const nullFilterHandler = (attr) => (canBeNull) => {
+    const idx = request['filters'].findIndex(filter => filter[1] === attr && filter[0] === 'isNull');
     if(idx === -1){
-      if(valType === 'min'){
-        newRequest['filters'].push(['between', attr, val, null]);
-      }else if(valType === 'max'){
-        newRequest['filters'].push(['between', attr, null, val]);
-      }
-
-      const lastIdx = newRequest['filters'].length - 1;
-      if(newRequest['filters'][lastIdx][2] === null && newRequest['filters'][lastIdx][3] === null){
-        newRequest['filters'].splice(lastIdx, 1);
-      }
+      if(canBeNull) request['filters'].push(['isNull', attr, true]);
     }else{
-      if(valType === 'min'){
-        newRequest['filters'][idx][2] = val;
-      }else if(valType === 'max'){
-        newRequest['filters'][idx][3] = val;
-      }
-
-      if(newRequest['filters'][idx][2] === null && newRequest['filters'][idx][3] === null){
-        newRequest['filters'].splice(idx, 1);
+      if(canBeNull){
+        request['filters'][idx][2] = true;
+      }else{
+        request['filters'].splice(idx, 1);
       }
     }
 
-    setRequest(newRequest);
-    displayProducts(newRequest, page, pageSize);
+    setRequest(request);
+    displayProducts(request, 1, pageSize);
+  }
+
+  const filterMinMaxHandler = (attr) => (val, valType) => {
+    const idx = request['filters'].findIndex(filter => filter[1] === attr && filter[0] === 'between');
+    if(idx === -1){
+      if(valType === 'min'){
+        request['filters'].push(['between', attr, val, null]);
+      }else if(valType === 'max'){
+        request['filters'].push(['between', attr, null, val]);
+      }
+
+      const lastIdx = request['filters'].length - 1;
+      if(request['filters'][lastIdx][2] === null && request['filters'][lastIdx][3] === null){
+        request['filters'].splice(lastIdx, 1);
+      }
+    }else{
+      if(valType === 'min'){
+        request['filters'][idx][2] = val;
+      }else if(valType === 'max'){
+        request['filters'][idx][3] = val;
+      }
+
+      if(request['filters'][idx][2] === null && request['filters'][idx][3] === null){
+        request['filters'].splice(idx, 1);
+      }
+    }
+
+    setRequest(request);
+    displayProducts(request, 1, pageSize);
   }
 
   function displayNewColOrder(attr, order){
@@ -190,6 +204,8 @@ function App(){
 
       const totalPages = (maxSize > 0) ? Math.ceil(maxSize/pageSize) : 0;
       setTotalPages(totalPages);
+
+      if(page > totalPages) page = totalPages;
 
       setPageSize(pageSize);
       setPage(page);
@@ -254,7 +270,8 @@ function App(){
       <CheckboxList handleCheckboxChange={attributesCheckboxHandler} items={attrNames} selectedItems={header} orderByName={true} />
       <Table header={header} data={products} attrToSort={request.attributesToSort} displayNewColOrder={displayNewColOrder} 
         attributeTypes={attributeTypes} filterMinMaxHandler={filterMinMaxHandler} attributeRanges={attributeRanges} 
-        filterCheckboxHandler={filterCheckboxHandler} totalResults={totalResults} loading={loading} />
+        filterCheckboxHandler={filterCheckboxHandler} totalResults={totalResults} loading={loading}
+        nullFilterHandler={nullFilterHandler} />
       <PaginationFooter goToPage={goToPage} page={page} totalPages={totalPages} hasReceivedData={hasReceivedData} 
         pageSize={pageSize} changePageSize={changePageSize} ref={paginationRefs} />
     </Styles>

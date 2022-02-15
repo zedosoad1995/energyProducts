@@ -1,6 +1,6 @@
 import { CheckboxList } from "../components/checkboxList.component";
 
-export function minMaxFilter(setFilter, attributeRanges){
+export function minMaxFilter(rangeFilter, attributeRanges){
     if(!(attributeRanges && 'min' in attributeRanges && 'max' in attributeRanges)) return null;
 
     return (
@@ -14,7 +14,7 @@ export function minMaxFilter(setFilter, attributeRanges){
             type="number"
             onChange={e => {
                 const val = (e.target.value) ? Number(e.target.value) : null;
-                setFilter(val, 'min');
+                rangeFilter(val, 'min');
             }}
             placeholder={`${attributeRanges['min']}`}
             style={{
@@ -27,7 +27,7 @@ export function minMaxFilter(setFilter, attributeRanges){
             type="number"
             onChange={e => {
                 const val = (e.target.value) ? Number(e.target.value) : null;
-                setFilter(val, 'max');
+                rangeFilter(val, 'max');
             }}
             placeholder={`${attributeRanges['max']}`}
             style={{
@@ -35,10 +35,6 @@ export function minMaxFilter(setFilter, attributeRanges){
                 marginLeft: '0.5rem',
             }}
         />
-        </div>
-        <div>
-            <input type="checkbox" id="hasNull"/>
-            <label for="hasNull"> null</label>
         </div>
         </>
     )
@@ -49,5 +45,21 @@ export function listValues(itemCheckboxHandler, attributeRanges){
 
     return (
         <CheckboxList items={attributeRanges['values']} handleCheckboxChange={itemCheckboxHandler}/>
+    )
+}
+
+export function nullFilter(nullHandler){
+    
+    return (
+        <div>
+            <input 
+                type="checkbox" 
+                id="hasNull" 
+                onChange={e => {
+                    nullHandler(e.target.checked);
+                }}
+            />
+            <label htmlFor="hasNull"> null</label>
+        </div>
     )
 }
