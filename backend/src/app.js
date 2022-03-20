@@ -17,6 +17,6 @@ app.use(function(_, res, next) {
     next();
 });
 
-app.use('/api', router);
+app.use('/api/v1', router);
 
 module.exports = app;

@@ -22,8 +22,11 @@ function convertProdAttribute(val, type){
         const convValue = convValueStr;
         
         // TODO: Logging, para quando ha valor invalido (pensar tb sobre como resolver throw)
-        if(convValueStr.trim().length === 0 || convValueStr[0] === ' ' || isNaN(convValue)) 
-            throw new Error(`Invalid format for attribute type Number. Value received: ${val}`);
+        if(convValueStr.trim().length === 0 || convValueStr[0] === ' ' || isNaN(convValue)){
+            console.error(`Invalid format for attribute type Number. Value received: ${val}`);
+            // TODO: Put this in logger
+            //throw new Error(`Invalid format for attribute type Number. Value received: ${val}`);
+        }
 
         return convValue;
 

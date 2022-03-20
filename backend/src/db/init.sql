@@ -1,5 +1,7 @@
 CREATE DATABASE IF NOT EXISTS energy_products;
 
+USE energy_products;
+
 CREATE TABLE IF NOT EXISTS reviews(
     id INT AUTO_INCREMENT PRIMARY KEY,
     rating DECIMAL(5, 4),
