@@ -3,18 +3,23 @@ const { getAllAtributeNames, ProductsQuery } = require('../services/products.ser
 const Promise = require("bluebird");
 const {getProductCatalogUrls, updateDBWithScrapedProducts, getProductUrlsInDB} = require('../db/queries');
 const {getHeader} = require('../services/utils/dataManipulation');
+const {logger} = require('../utils/logger')
 
 async function wortenScraper(_, res, next){
+
+    logger.info(`Starting scraping of Worten...`);
 
     const urls = await getProductCatalogUrls('Worten')
     .catch((err) => {
         res.sendStatus(500)
+        logger.error(err)
         throw err;
     });
 
     const {urlsWithAttributes, urlsNoAttributes} = await getProductUrlsInDB('Worten')
     .catch((err) => {
         res.sendStatus(500)
+        logger.info(err)
         throw err;
     });
 
@@ -24,16 +29,18 @@ async function wortenScraper(_, res, next){
         { concurrency: 2 }
     )
     .then(res => [].concat.apply([], res))
-    .catch((error) => {
+    .catch((err) => {
         res.sendStatus(500) && next(error);
-        console.error(error);
+        logger.error(err)
         throw new Error('Bad Request Scraping Products');
     });
 
     await updateDBWithScrapedProducts(scrapedProds, urlsNoAttributes)
-    .catch(error => {
-        console.log(error);
+    .catch(err => {
+        logger.error(err)
     });
+
+    logger.info(`Worten products successfully scraped.`);
 
     res.sendStatus(201);
 }

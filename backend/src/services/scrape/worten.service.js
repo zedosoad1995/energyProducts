@@ -2,13 +2,14 @@ let axios = require('axios');
 const cheerio = require("cheerio");
 const Promise = require("bluebird");
 const {Worten} = require('../data/attributesTypes.json');
+const {logger} = require('../../utils/logger')
 
 const antiIPBanConfigs = require('../utils/ipBlockedAxiosConfigs');
 
 const numberKeys = Worten['Numbers'];
 const boolKeys = Worten['Booleans'];
 
-function convertProdAttribute(val, type){
+function convertProdAttribute(val, type, key, url){
     if(type === 'Number'){
         const convValueStr = val.trim()
                             .split(' ')[0]
@@ -23,9 +24,7 @@ function convertProdAttribute(val, type){
         
         // TODO: Logging, para quando ha valor invalido (pensar tb sobre como resolver throw)
         if(convValueStr.trim().length === 0 || convValueStr[0] === ' ' || isNaN(convValue)){
-            console.error(`Invalid format for attribute type Number. Value received: ${val}`);
-            // TODO: Put this in logger
-            //throw new Error(`Invalid format for attribute type Number. Value received: ${val}`);
+            logger.warn(`Invalid format for attribute type Number. Value received: '${val}' for attribute ${key} in '${url}'`);
         }
 
         return convValue;
@@ -36,6 +35,7 @@ function convertProdAttribute(val, type){
         }else if(val === 'Não'){
             return 'false';
         }else{
+            logger.warn(`Invalid boolean value to convert. It can only have the following values: Sim, Não.\nInstead it has the value: ${val}`);
             throw new Error(`Invalid boolean value to convert. It can only have the following values: Sim, Não.\nInstead it has the value: ${val}`);
         }
     }
@@ -59,18 +59,21 @@ async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
     productObj['url'] = product['default_url'];
     productObj['price'] = product['price'];
 
-    //console.log(productObj['url']);
+    logger.info(`Extracting product info from ${productObj['url']}`)
 
     const hasProductAttributesInDB = urlsWithAttributes.includes(productObj['url']);
 
     // Get more details of product. Assumes these values are static, therefore it only obtains once (when it is a new product)
     if(!hasProductAttributesInDB){
+        logger.info(`New product`)
 
         const axiosConfig = {
             headers: antiIPBanConfigs
         };
 
-        await axios.get("https://www.worten.pt" + product['default_url'], axiosConfig).then(resp => {
+        const productDetailsUrl = "https://www.worten.pt" + product['default_url']
+        logger.info(`Extracting further details from products: ${productDetailsUrl}`)
+        await axios.get(productDetailsUrl, axiosConfig).then(resp => {
             const $ = cheerio.load(resp.data);
 
             productObj['more-details'] = {};
@@ -87,7 +90,7 @@ async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
                     attrType = 'Bool';
                 }
 
-                const convertedVal = convertProdAttribute(attrValue, attrType);
+                const convertedVal = convertProdAttribute(attrValue, attrType, key, productDetailsUrl);
 
                 if(Array.isArray(convertedVal)){
                     productObj['more-details'][key+'_low'] = convertedVal[0];
@@ -149,6 +152,7 @@ async function getWortenProducts(url, urlsWithAttributes){
     while(!lastPage){
 
         const urlPage = url + "?sort_by=name&x-event-type=product_list%3Arefresh&page=" + pageNum;
+        logger.info(`Extracting products from ${urlPage}`)
         let productsInfo = await getPageProductsInfo(urlPage, axiosConfig);
 
         // get product details

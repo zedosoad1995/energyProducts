@@ -1,5 +1,6 @@
 const db = require('./config');
 const util = require('util');
+const {logger} = require('../utils/logger')
 
 const {fillReviews} = require('./insertUpdateProdHelper/reviews');
 const {fillProducts} = require('./insertUpdateProdHelper/products');
@@ -114,8 +115,8 @@ async function updateDBWithScrapedProducts(products, urlsNoAttributes){
 
             const {productsInDB, productsNotInDB} = await getProductsInDB(products)
 
-            console.log('# of existing products being scraped:', Object.keys(productsInDB).length);
-            console.log('# of new products being scraped:', Object.keys(productsNotInDB).length); 
+            logger.info(`# of existing products being scraped: ${Object.keys(productsInDB).length}`);
+            logger.info(`# of new products being scraped: ${Object.keys(productsNotInDB).length}`); 
 
             const {idReviewToUpdate, idReviewToInsert, idProdToUpdate} = await fillReviews(productsInDB, productsNotInDB);
 
