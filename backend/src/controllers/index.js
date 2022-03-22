@@ -2,8 +2,8 @@ const { getWortenProducts } = require('../services/scrape/worten.service');
 const { getAllAtributeNames, ProductsQuery } = require('../services/products.service');
 const Promise = require("bluebird");
 const {getProductCatalogUrls, updateDBWithScrapedProducts, getProductUrlsInDB} = require('../db/queries');
-const {getHeader} = require('../services/utils/dataManipulation');
-const {logger} = require('../utils/logger')
+const {logger} = require('../utils/logger');
+const {getProductAttrNames} = require('../db/queries');
 
 async function wortenScraper(_, res, next){
 
@@ -23,9 +23,17 @@ async function wortenScraper(_, res, next){
         throw err;
     });
 
+    const prodAttrNames = await getProductAttrNames()
+    .then(Object.keys)
+    .catch((err) => {
+        res.sendStatus(500)
+        logger.info(err)
+        throw err;
+    });
+
     // scrape products
     const scrapedProds = await Promise.map(urls,
-        url => getWortenProducts(url, urlsWithAttributes),
+        url => getWortenProducts(url, urlsWithAttributes, prodAttrNames),
         { concurrency: 2 }
     )
     .then(res => [].concat.apply([], res))
@@ -40,7 +48,7 @@ async function wortenScraper(_, res, next){
         logger.error(err)
     });
 
-    logger.info(`Worten products successfully scraped.`);
+    logger.info(`Worten products successfully scraped.\n`);
 
     res.sendStatus(201);
 }

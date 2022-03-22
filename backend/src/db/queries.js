@@ -63,6 +63,21 @@ async function getProductUrlsInDB(dist){
         });
 }
 
+async function getProductAttrNames(){
+    const query = `
+        SELECT DISTINCT attributeName, datatype
+        FROM productAttributes;`;
+
+    return dbQuery(query)
+        .then(attrs => attrs.reduce((obj, val) => {
+            obj[val['attributeName']] = val['datatype'];
+            return obj;
+        }, {}))
+        .catch(error => {
+            throw(error);
+        });
+}
+
 // TODO: what if url is undefined??? tratar desse caso, alterar codigo para acomidar isso.
 async function getProductsInDB(products){
     const urls = products.map(product => product['url']);
@@ -147,5 +162,6 @@ module.exports = {
     updateDBWithScrapedProducts,
     getProductUrlsInDB,
     getProductsInDB,
-    getUrlToProductId
+    getUrlToProductId,
+    getProductAttrNames
 }

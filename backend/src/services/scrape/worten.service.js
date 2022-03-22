@@ -2,12 +2,14 @@ let axios = require('axios');
 const cheerio = require("cheerio");
 const Promise = require("bluebird");
 const {Worten} = require('../data/attributesTypes.json');
-const {logger} = require('../../utils/logger')
+const {logger} = require('../../utils/logger');
 
 const antiIPBanConfigs = require('../utils/ipBlockedAxiosConfigs');
 
 const numberKeys = Worten['Numbers'];
 const boolKeys = Worten['Booleans'];
+
+let newAttributes = []
 
 function convertProdAttribute(val, type, key, url){
     if(type === 'Number'){
@@ -43,7 +45,7 @@ function convertProdAttribute(val, type, key, url){
     return val
 }
 
-async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
+async function getProductInfo(scrapedProducts, product, urlsWithAttributes, prodAttrNames){
     let productObj = {};
 
     // Get basic info
@@ -59,20 +61,18 @@ async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
     productObj['url'] = product['default_url'];
     productObj['price'] = product['price'];
 
-    logger.info(`Extracting product info from ${productObj['url']}`)
+    const productDetailsUrl = "https://www.worten.pt" + productObj['url']
+    logger.info(`Extracting product info from ${productDetailsUrl}`)
 
     const hasProductAttributesInDB = urlsWithAttributes.includes(productObj['url']);
 
     // Get more details of product. Assumes these values are static, therefore it only obtains once (when it is a new product)
     if(!hasProductAttributesInDB){
-        logger.info(`New product`)
-
         const axiosConfig = {
             headers: antiIPBanConfigs
         };
 
-        const productDetailsUrl = "https://www.worten.pt" + product['default_url']
-        logger.info(`Extracting further details from products: ${productDetailsUrl}`)
+        logger.info(`New Product. Extracting further details from product: ${productDetailsUrl}`);
         await axios.get(productDetailsUrl, axiosConfig).then(resp => {
             const $ = cheerio.load(resp.data);
 
@@ -82,6 +82,11 @@ async function getProductInfo(scrapedProducts, product, urlsWithAttributes){
             $("li[class='clearfix']").each(function (_, e) {
                 const key = $(e).find('.details-label').contents().last().text();
                 const attrValue = $(e).find('.details-value').text();
+
+                if(!(key in prodAttrNames || newAttributes.includes(key))){
+                    newAttributes.push(key);
+                    logger.info(`New Attribute Added: '${key}', from product: ${productDetailsUrl}`);
+                }
 
                 let attrType = 'NoType';
                 if(numberKeys.includes(key)){
@@ -131,7 +136,7 @@ function getPageProductsInfo(url, axiosConfig){
         });
 }
 
-async function getWortenProducts(url, urlsWithAttributes){
+async function getWortenProducts(url, urlsWithAttributes, prodAttrNames){
 
     const axiosConfig = {
         headers: {
@@ -158,7 +163,7 @@ async function getWortenProducts(url, urlsWithAttributes){
         // get product details
         // TODO: return val, instead of pass by reference
         await Promise.map(productsInfo['products'],
-            product => getProductInfo(scrapedProducts, product, urlsWithAttributes),
+            product => getProductInfo(scrapedProducts, product, urlsWithAttributes, prodAttrNames),
             { concurrency: 6 }
         )
         .catch((error) => {

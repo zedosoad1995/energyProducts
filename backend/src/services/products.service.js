@@ -5,6 +5,7 @@ const {clip} = require('./utils/math');
 require('dotenv').config();
 
 const metaProds = require('./data/prodsForDisplayMeta.json');
+const {getProductAttrNames} = require('../db/queries')
 
 const dbQuery = util.promisify(db.query).bind(db);
 
@@ -43,21 +44,6 @@ async function errorHandling_getProductsToDisplay(attributesToDisplay, attribute
     /*let invalidAttributeNames = [];
     if(await hasInvalidAttributeNames(attributesToDisplay, invalidAttributeNames))
         throw new Error(`'attributesToDisplay' contains attributes that to not exist in the DB: ${invalidAttributeNames.join(', ')}`);*/
-}
-
-async function getProductAttrNames(){
-    const query = `
-        SELECT DISTINCT attributeName, datatype
-        FROM productAttributes;`;
-
-    return dbQuery(query)
-            .then(attrs => attrs.reduce((obj, val) => {
-                obj[val['attributeName']] = val['datatype'];
-                return obj;
-            }, {}))
-            .catch(error => {
-                throw(error);
-            });
 }
 
 async function getAllAtributeNames(){
