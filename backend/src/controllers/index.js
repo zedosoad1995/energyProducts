@@ -1,4 +1,4 @@
-const { getWortenProducts } = require('../services/scrape/worten.service');
+const { WortenScraper } = require('../services/scrape/worten.service');
 const { getAllAtributeNames, ProductsQuery } = require('../services/products.service');
 const Promise = require("bluebird");
 const {getProductCatalogUrls, updateDBWithScrapedProducts, getProductUrlsInDB} = require('../db/queries');
@@ -9,44 +9,27 @@ async function wortenScraper(_, res, next){
 
     logger.info(`Starting scraping of Worten...`);
 
-    const urls = await getProductCatalogUrls('Worten')
-    .catch((err) => {
-        res.sendStatus(500)
-        logger.error(err)
-        throw err;
-    });
+    try{
+        const urls = await getProductCatalogUrls('Worten')
 
-    const {urlsWithAttributes, urlsNoAttributes} = await getProductUrlsInDB('Worten')
-    .catch((err) => {
-        res.sendStatus(500)
-        logger.info(err)
-        throw err;
-    });
+        const {urlsWithAttributes, urlsNoAttributes} = await getProductUrlsInDB('Worten')
 
-    const prodAttrNames = await getProductAttrNames()
-    .then(Object.keys)
-    .catch((err) => {
-        res.sendStatus(500)
-        logger.info(err)
-        throw err;
-    });
+        const prodAttrNames = await getProductAttrNames().then(Object.keys)
 
-    // scrape products
-    const scrapedProds = await Promise.map(urls,
-        url => getWortenProducts(url, urlsWithAttributes, prodAttrNames),
-        { concurrency: 2 }
-    )
-    .then(res => [].concat.apply([], res))
-    .catch((err) => {
-        res.sendStatus(500) && next(error);
-        logger.error(err)
-        throw new Error('Bad Request Scraping Products');
-    });
+        // scrape products
+        const scrapedProds = await Promise.map(urls,
+                url => new WortenScraper(urlsWithAttributes, prodAttrNames).getProducts(url),
+                { concurrency: 2 }
+            )
+            .then(res => [].concat.apply([], res))
 
-    await updateDBWithScrapedProducts(scrapedProds, urlsNoAttributes)
-    .catch(err => {
-        logger.error(err)
-    });
+        await updateDBWithScrapedProducts(scrapedProds, urlsNoAttributes)
+    }catch(err){
+        res.sendStatus(500);
+        logger.error(err + '\n')
+        next(err);
+        return;
+    }
 
     logger.info(`Worten products successfully scraped.\n`);
 

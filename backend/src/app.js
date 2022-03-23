@@ -19,4 +19,8 @@ app.use(function(_, res, next) {
 
 app.use('/api/v1', router);
 
+app.use((error, req, res, next) => {
+    console.log(error);
+})
+
 module.exports = app;
