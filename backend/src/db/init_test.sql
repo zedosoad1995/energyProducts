@@ -1,4 +1,4 @@
-CREATE DATABASE IF NOT EXISTS energy_products;
+CREATE DATABASE IF NOT EXISTS energy_products_test;
 
 USE energy_products;
 SET GLOBAL sql_mode='';

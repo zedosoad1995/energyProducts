@@ -45,19 +45,20 @@ function getIdReviewToInsert(idReviewToInsert, hasReview){
     let idReviewToInsertWithNull = [];
     let j = 0;
 
+    if(idReviewToInsert.length < hasReview.filter(x => x === true).length){
+        throw new Error('Not enough ids in \'idReviewToInsert\', for number of \'true\' in \'hasReview\'');
+    }else if(idReviewToInsert.length > hasReview.filter(x => x === true).length){
+        throw new Error('Too many ids in \'idReviewToInsertData\', for number of \'true\' in \'hasReview\'');
+    }
+
     for(let i = 0; i < hasReview.length; i++){
         if(hasReview[i]){
-            if(j >= idReviewToInsert.length)
-                throw new Error('Not enough ids in \'idReviewToInsert\', for number of \'true\' in \'hasReview\'');
             idReviewToInsertWithNull.push(idReviewToInsert[j]);
             j++;
         }else{
             idReviewToInsertWithNull.push(null);
         }
     }
-
-    if(j < idReviewToInsert.filter(x => x === true).length)
-        throw new Error('Too many ids in \'idReviewToInsertData\', for number of \'true\' in \'hasReview\'');
 
     return idReviewToInsertWithNull;
 }

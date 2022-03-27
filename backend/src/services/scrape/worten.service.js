@@ -9,6 +9,62 @@ const antiIPBanConfigs = require('../utils/ipBlockedAxiosConfigs');
 const numberKeys = Worten['Numbers'];
 const boolKeys = Worten['Booleans'];
 
+function convertProdAttribute(val, type, key, url){
+    if(type === 'Number'){
+        const convValueStr = val.trim()
+                            .split(' ')[0]
+                            .replace(/[^\d.,\/-]/g, ' ')
+                            .replace(",", ".")
+                            .replace("..", ".")
+
+        if(/^\d+(?:\.\d+)?[\/-]\d+(?:\.\d+)?/.test(convValueStr))
+            return convValueStr.match(/^(\d+(?:\.\d+)?)[\/-](\d+(?:\.\d+)?)/).slice(1).map(Number).map(String);
+
+        const convValue = String(Number(convValueStr));
+        
+        if(convValueStr.trim().length === 0 || convValueStr[0] === ' ' || isNaN(convValue)){
+            logger.warn(`Invalid format for attribute type Number. Value received: '${val}' for attribute ${key} in '${url}'`);
+        }
+
+        return convValue;
+
+    }else if(type === 'Bool'){
+        if(val === 'Sim'){
+            return 'true';
+        }else if(val === 'Não'){
+            return 'false';
+        }else{
+            logger.warn(`Invalid boolean value to convert. It can only have the following values: Sim, Não.\nInstead it has the value: ${val}`);
+            throw new Error(`Invalid boolean value to convert. It can only have the following values: Sim, Não.\nInstead it has the value: ${val}`);
+        }
+    }
+
+    return val
+}
+
+function getPageProductsInfo(url, axiosConfig){
+    return axios.get(url, axiosConfig)
+        .then(resp => {
+
+            // Find JSON with products
+            for(let module of Object.values(resp.data["modules"])){
+                if(!('model' in module)) continue;
+
+                if(module['model']['template'] === 'product_list'){
+
+                    if(!('products' in module['model']))
+                        throw new Error('No \'products\' key in modules > model.');
+
+                    return module['model'];
+                }
+            }
+            throw new Error('No \'product_list\' key in modules > model.');
+        })
+        .catch(err => {
+            throw err;
+        });
+}
+
 class WortenScraper{
     #urlsWithAttributes;
     #prodAttrNames;
@@ -20,40 +76,6 @@ class WortenScraper{
         this.#prodAttrNames = attrNames;
         this.#scrapedProducts = [];
         this.#newAttributes = [];
-    }
-
-    #convertProdAttribute(val, type, key, url){
-        if(type === 'Number'){
-            const convValueStr = val.trim()
-                                .split(' ')[0]
-                                .replace(/[^\d.,\/-]/g, ' ')
-                                .replace(",", ".")
-                                .replace("..", ".")
-
-            if(/^\d+(?:\.\d+)?[\/-]\d+(?:\.\d+)?/.test(convValueStr))
-                return convValueStr.match(/^(\d+(?:\.\d+)?)[\/-](\d+(?:\.\d+)?)/).slice(1).map(Number);
-
-            const convValue = convValueStr;
-            
-            // TODO: Logging, para quando ha valor invalido (pensar tb sobre como resolver throw)
-            if(convValueStr.trim().length === 0 || convValueStr[0] === ' ' || isNaN(convValue)){
-                logger.warn(`Invalid format for attribute type Number. Value received: '${val}' for attribute ${key} in '${url}'`);
-            }
-
-            return convValue;
-
-        }else if(type === 'Bool'){
-            if(val === 'Sim'){
-                return 'true';
-            }else if(val === 'Não'){
-                return 'false';
-            }else{
-                logger.warn(`Invalid boolean value to convert. It can only have the following values: Sim, Não.\nInstead it has the value: ${val}`);
-                throw new Error(`Invalid boolean value to convert. It can only have the following values: Sim, Não.\nInstead it has the value: ${val}`);
-            }
-        }
-
-        return val
     }
 
     async #getProductInfo(product){
@@ -107,7 +129,7 @@ class WortenScraper{
                         attrType = 'Bool';
                     }
 
-                    const convertedVal = that.#convertProdAttribute(attrValue, attrType, key, productDetailsUrl);
+                    const convertedVal = convertProdAttribute(attrValue, attrType, key, productDetailsUrl);
 
                     if(Array.isArray(convertedVal)){
                         productObj['more-details'][key+'_low'] = convertedVal[0];
@@ -122,29 +144,6 @@ class WortenScraper{
         }
 
         this.#scrapedProducts.push(productObj);
-    }
-
-    #getPageProductsInfo(url, axiosConfig){
-        return axios.get(url, axiosConfig)
-            .then(resp => {
-
-                // Find JSON with products
-                for(let module of Object.values(resp.data["modules"])){
-                    if(!('model' in module)) continue;
-
-                    if(module['model']['template'] === 'product_list'){
-
-                        if(!('products' in module['model']))
-                            throw new Error('No \'products\' key in modules > model.');
-
-                        return module['model'];
-                    }
-                }
-                throw new Error('No \'product_list\' key in modules > model.');
-            })
-            .catch(err => {
-                throw err;
-            });
     }
 
     async getProducts(url){
@@ -168,7 +167,7 @@ class WortenScraper{
 
             const urlPage = url + "?sort_by=name&x-event-type=product_list%3Arefresh&page=" + pageNum;
             logger.info(`Extracting products from ${urlPage}`)
-            let productsInfo = await this.#getPageProductsInfo(urlPage, axiosConfig);
+            let productsInfo = await getPageProductsInfo(urlPage, axiosConfig);
 
             // get product details
             // TODO: return val, instead of pass by reference
@@ -195,5 +194,7 @@ class WortenScraper{
 }
 
 module.exports = {
-    WortenScraper
+    WortenScraper,
+    getPageProductsInfo,
+    convertProdAttribute
 }

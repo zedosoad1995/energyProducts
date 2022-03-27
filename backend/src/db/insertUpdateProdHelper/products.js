@@ -34,8 +34,8 @@ async function getCategoryIds(productsNotInDB, distributorIds){
     const categoryNamesInDB = Object.values(productsNotInDB).map((product) => categoryTranslation[product['categories']]);
 
     // TODO: Uncomment
-    //if(categoryNamesInDB.includes(undefined))
-    //    throw new Error(`undefined value in key 'categories'`);
+    if(categoryNamesInDB.includes(undefined))
+        throw new Error(`undefined value in key 'categories'`);
 
     const query = `SELECT id, name, distributorID
                     FROM categories
@@ -90,7 +90,7 @@ function getProductsToUpdate(idProdToUpdate, idReviewToUpdate){
 }
 
 async function updateInsertProducts(products){
-    if(products.length == 0) return;
+    if(products.length === 0) return;
 
     const query = `
         INSERT INTO products 
