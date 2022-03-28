@@ -1,13 +1,15 @@
-const {categories, distributors, products, productAttributes, prices, reviews} = require('../../db/dbModels');
-const {updateDBWithScrapedProducts} = require('../../db/queries.js');
-const pricesHelper = require('../../db/insertUpdateProdHelper/prices.js');
+const {categories, distributors, products, productAttributes, prices, reviews} = require('../../src/db/dbModels');
+const {updateDBWithScrapedProducts} = require('../../src/db/queries.js');
+const pricesHelper = require('../../src/db/insertUpdateProdHelper/prices.js');
+
+jest.mock('../../src/utils/logger.js');
 
 function dateToString(date){
     return date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();
 }
 
-jest.mock('../../db/insertUpdateProdHelper/prices.js', () => {
-    const original = jest.requireActual('../../db/insertUpdateProdHelper/prices.js');
+jest.mock('../../src/db/insertUpdateProdHelper/prices.js', () => {
+    const original = jest.requireActual('../../src/db/insertUpdateProdHelper/prices.js');
     return {
       ...original,
       fillPrices: jest.fn()

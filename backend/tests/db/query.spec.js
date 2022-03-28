@@ -1,5 +1,7 @@
-const {categories, distributors, products, productAttributes, prices, reviews} = require('../../db/dbModels');
-const {getProductCatalogUrls, getProductUrlsInDB, getProductsInDB, getUrlToProductId, updateDBWithScrapedProducts} = require('../../db/queries.js');
+const {categories, distributors, products, productAttributes, prices, reviews} = require('../../src/db/dbModels');
+const {getProductCatalogUrls, getProductUrlsInDB, getProductsInDB, getUrlToProductId, updateDBWithScrapedProducts} = require('../../src/db/queries.js');
+
+jest.mock('../../src/utils/logger.js');
 
 function dateToString(date){
     return date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();

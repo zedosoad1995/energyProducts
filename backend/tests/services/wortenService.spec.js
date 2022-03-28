@@ -1,7 +1,10 @@
-const {getPageProductsInfo, convertProdAttribute} = require('../../services/scrape/worten.service');
+const {getPageProductsInfo, convertProdAttribute} = require('../../src/services/scrape/worten.service');
+
+const {logger} = require('../../src/utils/logger.js');
 
 const axios = require('axios');
 jest.mock('axios');
+jest.mock('../../src/utils/logger.js');
 
 describe('Function getPageProductsInfo to obtain JSON containing multiple products from one page of Worten.', () => {
 
@@ -188,12 +191,11 @@ describe('Function convertProdAttribute to convert attribute from product', () =
         })
     })
 
-    /* it('Should throw exception for multiple invalid inputs (Number attribute type)', () => {
+    it('Should throw exception for multiple invalid inputs (Number attribute type)', () => {
 
         const testInputs = ["2r4","text", "a2"];
         
-        testInputs.forEach(input => {
-            expect(() => convertProdAttribute(input, 'Number')).toThrow();
-        })
-    }) */
+        testInputs.forEach(input => convertProdAttribute(input, 'Number'));
+        expect(logger.warn).toHaveBeenCalledTimes(testInputs.length);
+    })
 })

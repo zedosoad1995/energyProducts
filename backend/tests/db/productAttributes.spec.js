@@ -1,5 +1,5 @@
-const {productAttributes, distributors, products} = require('../../db/dbModels');
-const {fillProductAttributes} = require('../../db/insertUpdateProdHelper/productAttributes.js');
+const {productAttributes, distributors, products} = require('../../src/db/dbModels');
+const {fillProductAttributes} = require('../../src/db/insertUpdateProdHelper/productAttributes.js');
 
 describe('Function fillProductAttributes', () => {
 

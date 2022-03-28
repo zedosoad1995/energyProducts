@@ -96,8 +96,6 @@ class WortenScraper{
         productObj['price'] = product['price'];
 
         const productDetailsUrl = "https://www.worten.pt" + productObj['url']
-        logger.info(`Extracting product info from ${productDetailsUrl}`)
-
         const hasProductAttributesInDB = this.#urlsWithAttributes.includes(productObj['url']);
 
         // Get more details of product. Assumes these values are static, therefore it only obtains once (when it is a new product)
@@ -106,7 +104,6 @@ class WortenScraper{
                 headers: antiIPBanConfigs
             };
 
-            logger.info(`New Product. Extracting further details from product: ${productDetailsUrl}`);
             await axios.get(productDetailsUrl, axiosConfig).then(resp => {
                 const $ = cheerio.load(resp.data);
 
@@ -166,7 +163,6 @@ class WortenScraper{
         while(!lastPage){
 
             const urlPage = url + "?sort_by=name&x-event-type=product_list%3Arefresh&page=" + pageNum;
-            logger.info(`Extracting products from ${urlPage}`)
             let productsInfo = await getPageProductsInfo(urlPage, axiosConfig);
 
             // get product details

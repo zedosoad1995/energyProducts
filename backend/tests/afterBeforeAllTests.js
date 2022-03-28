@@ -1,6 +1,6 @@
-const {truncateAll} = require('../db/dbModels');
-const db = require('../db/config');
-const {waitForDbConnection} = require('../db/utils/connection');
+const {truncateAll} = require('../src/db/dbModels');
+const db = require('../src/db/config');
+const {waitForDbConnection} = require('../src/db/utils/connection');
 
 beforeAll(async () => {
     await waitForDbConnection();

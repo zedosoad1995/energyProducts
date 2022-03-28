@@ -10,7 +10,7 @@ git clone https://github.com/zedosoad1995/energyProducts.git
 cd energyProducts
 ```
 
-Make sure to create a [.env](#) file inside backend folder, using the same fields as [.env_example](backend/.env_example).
+Make sure to create a [.env](#) and [.env.test](#) files inside backend folder, using the same fields as [.env_example](backend/.env_example) and [.env.test_example](backend/.env.test_example), respectively.
 
 ## Frontend Setup
 

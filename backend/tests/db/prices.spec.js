@@ -1,5 +1,5 @@
-const {distributors, products, prices} = require('../../db/dbModels');
-const {getChangedPrices, getFirstPrices_ProdInDB, upsertPrices} = require('../../db/insertUpdateProdHelper/prices.js');
+const {distributors, products, prices} = require('../../src/db/dbModels');
+const {getChangedPrices, getFirstPrices_ProdInDB, upsertPrices} = require('../../src/db/insertUpdateProdHelper/prices.js');
 
 function dateToString(date){
     return date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate();

@@ -1,6 +1,6 @@
-const {distributors, products, reviews} = require('../../db/dbModels');
+const {distributors, products, reviews} = require('../../src/db/dbModels');
 const {updateInsertReviews, getReviewsToInsert_ProdInDB, getReviewsToInsert_ProdNotInDB,
-    getInsertedIds_Reviews, getIdReviewToInsert, getReviewsToUpdate, fillReviews} = require('../../db/insertUpdateProdHelper/reviews.js');
+    getInsertedIds_Reviews, getIdReviewToInsert, getReviewsToUpdate, fillReviews} = require('../../src/db/insertUpdateProdHelper/reviews.js');
 
 describe('Function getReviewsToInsert_ProdInDB', () => {
 

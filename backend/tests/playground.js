@@ -1,5 +1,5 @@
-const {getProductsForDisplay} = require('../services/products.service');
-const {waitForDbConnection} = require('../db/utils/connection');
+const {getProductsForDisplay} = require('../src/services/products.service');
+const {waitForDbConnection} = require('../src/db/utils/connection');
 
 async function main(){
     await waitForDbConnection();

@@ -1,5 +1,5 @@
-const {categories, distributors, products, reviews} = require('../../db/dbModels');
-const {getDistributorIds, getCategoryIds, getProductsToInsert, getProductsToUpdate, updateInsertProducts} = require('../../db/insertUpdateProdHelper/products.js');
+const {categories, distributors, products, reviews} = require('../../src/db/dbModels');
+const {getDistributorIds, getCategoryIds, getProductsToInsert, getProductsToUpdate, updateInsertProducts} = require('../../src/db/insertUpdateProdHelper/products.js');
 
 describe('Function getDistributorIds', () => {
 
