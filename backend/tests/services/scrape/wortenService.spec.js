@@ -1,10 +1,10 @@
-const {getPageProductsInfo, convertProdAttribute} = require('../../src/services/scrape/worten.service');
+const {getPageProductsInfo, convertProdAttribute} = require('../../../src/services/scrape/worten.service');
 
-const {logger} = require('../../src/utils/logger.js');
+const {logger} = require('../../../src/utils/logger.js');
 
 const axios = require('axios');
 jest.mock('axios');
-jest.mock('../../src/utils/logger.js');
+jest.mock('../../../src/utils/logger.js');
 
 describe('Function getPageProductsInfo to obtain JSON containing multiple products from one page of Worten.', () => {
 

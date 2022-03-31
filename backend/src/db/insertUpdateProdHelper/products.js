@@ -3,11 +3,6 @@ const util = require('util');
 
 const dbQuery = util.promisify(db.query).bind(db);
 
-const categoryTranslation = {
-    'Esquentadores': 'Esquentador', 
-    'Termoacumuladores': 'Termoacumulador'
-};
-
 async function getDistributorIds(productsNotInDB){
     const distributorNames = Object.values(productsNotInDB).map((product) => product['distributor']);
 
@@ -31,7 +26,7 @@ async function getDistributorIds(productsNotInDB){
 
 async function getCategoryIds(productsNotInDB, distributorIds){
     // TODO: categoryTranslation? How to better deal with that
-    const categoryNamesInDB = Object.values(productsNotInDB).map((product) => categoryTranslation[product['categories']]);
+    const categoryNamesInDB = Object.values(productsNotInDB).map((product) => product['categories']);
 
     // TODO: Uncomment
     if(categoryNamesInDB.includes(undefined))
