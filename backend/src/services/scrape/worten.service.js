@@ -91,7 +91,7 @@ class WortenScraper{
         productObj['description'] = product['description'];
         productObj['rating'] = (isNaN(Number(product['rating_bazaar'])))? null: Number(product['rating_bazaar']);
         productObj['num-reviews'] = (isNaN(Number(product['reviews_bazaar'])))? null: Number(product['reviews_bazaar']);
-        productObj['categories'] = product['category_path'][product['category_path'].length-1];
+        productObj['category'] = product['category_path'][product['category_path'].length-1];
         productObj['url'] = product['default_url'];
         productObj['price'] = product['price'];
 

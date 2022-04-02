@@ -3,19 +3,19 @@ const {preprocessScrapedData} = require('../../../src/services/scrape/utils')
 it(`Translates category`, () => {
     const inputData = [
         {
-            categories: 'Esquentadores',
+            category: 'Esquentadores',
         },
         {
-            categories: 'Termoacumuladores',
+            category: 'Termoacumuladores',
         }
     ];
 
     const expectedOutput = [
         {
-            categories: 'Esquentador',
+            category: 'Esquentador',
         },
         {
-            categories: 'Termoacumulador',
+            category: 'Termoacumulador',
         }
     ];
 
@@ -27,7 +27,7 @@ it(`Translates category`, () => {
 it(`Removes inexistent category`, () => {
     const inputData = [
         {
-            categories: 'blablabla',
+            category: 'blablabla',
         }
     ];
 
@@ -39,7 +39,7 @@ it(`Removes inexistent category`, () => {
 it(`Removes inexistent category`, () => {
     const inputData = [
         {
-            categories: 'blablabla',
+            category: 'blablabla',
         }
     ];
 

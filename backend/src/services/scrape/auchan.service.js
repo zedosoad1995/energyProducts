@@ -1,0 +1,105 @@
+let axios = require('axios');
+const cheerio = require("cheerio");
+const _ = require('lodash');
+
+function getProductDetails(url){
+    return axios.get(url)
+        .then(resp => {
+            const $ = cheerio.load(resp.data);
+
+            let prodAttributes = { url }
+            $('h3.attribute-name').each((i, e) => {
+                const attrName = $(e).text().trim();
+                const attrValue = $(`li.attribute-values`).eq(i).text().trim();
+                prodAttributes[attrName] = attrValue;
+            });
+
+            prodAttributes['ean'] = $('span.product-ean').text()
+
+            return prodAttributes;
+        })
+        .catch(err => {
+            throw(err);
+        });
+}
+
+function normalizeProductDetails(mainDetailsArr, otherDetailsArr){
+    prodDetailsArr = []
+
+    mainDetailsArr.forEach(mainDetails => {
+        otherDetails = otherDetailsArr.find(obj => obj['url'] === mainDetails['url']);
+        let allDetails = {...mainDetails, ...otherDetails};
+
+        allDetails['category'] = allDetails['category'].split('/').pop();
+        allDetails['distributor'] = 'Auchan';
+        allDetails['rating'] = null;
+        allDetails['num-reviews'] = null;
+
+        allDetails = _.omit(allDetails, ['Marca', 'dimension6', 'dimension7', 'dimension11', 'id', 'Modelo', 'Marca']);
+
+        prodDetailsArr.push(allDetails);
+    })
+
+
+
+    return prodDetailsArr;
+}
+
+class AuchanScraper{
+
+    static #baseUrl = 'https://www.auchan.pt';
+
+    constructor(){
+    }
+
+    async getProducts(url){
+
+        let offset = 0;
+        const size = 10;
+
+        let scrapedProducts = [];
+
+        while(true){
+            const numProducts = await axios.get(url + `&start=${offset}&sz=${size}`)
+                .then(async resp => {
+                    const $ = cheerio.load(resp.data);
+
+                    let prodDetailsPromises = [];
+                    let mainProdsDetails = [];
+                    $('div.auc-product > div.product > div').each(async (_, e) => {
+                        const prodPath = JSON.parse($(e).attr('data-urls'))['productUrl'];
+                        const prodUrl = AuchanScraper.#baseUrl + prodPath;
+
+                        let mainProdDetails = JSON.parse($(e).attr('data-gtm'));
+                        mainProdDetails['url'] = prodUrl;
+                        mainProdsDetails.push(mainProdDetails);
+
+                        prodDetailsPromises.push(getProductDetails(prodUrl));
+                    });
+
+                    const productDetails = await Promise.all(prodDetailsPromises)
+                        .catch(err => {
+                            throw(err);
+                        });
+
+                    scrapedProducts.push(...normalizeProductDetails(mainProdsDetails, productDetails));
+
+                    return prodDetailsPromises.length;
+                });
+            
+            if(numProducts <= 0) break;
+
+            offset += size;
+        }
+
+        return scrapedProducts;
+    }
+}
+
+const scraper = new AuchanScraper();
+scraper.getProducts('https://www.auchan.pt/on/demandware.store/Sites-AuchanPT-Site/pt_PT/Search-UpdateGrid?cgid=aquecimento-agua&srule=price-high-to-low&prefn1=soldInStores&prefv1=000&isSort=true')
+.then(prods => console.log(prods.length));
+
+module.exports = {
+    AuchanScraper
+}

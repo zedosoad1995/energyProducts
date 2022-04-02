@@ -2,9 +2,9 @@ const categoriesDict = require('../data/categoriesTranslation.json')
 
 function preprocessScrapedData(data){
     return data.reduce((obj, item) => {
-            if(item['categories'] in categoriesDict){
+            if(item['category'] in categoriesDict){
                 // Translate category name
-                item['categories'] = categoriesDict[item['categories']];
+                item['category'] = categoriesDict[item['category']];
                 obj.push(item);
             }
 

@@ -36,9 +36,9 @@ describe('Function updateDBWithScrapedProducts Error', () => {
         const scrapedProds = [{url: 'url1', 'more-details': {at3: 4.4}, rating: 3, 'num-reviews': 1, price: 15},
                                 {url: 'url2', rating: 4.5, 'num-reviews': undefined, price: 15},
                                 {url: 'url3', rating: 3, 'num-reviews': 2, price: 666.66},
-                                {url: 'url4', name: 'prod4', brand: 'brand1', distributor: 'dist1', categories: 'Esquentadores', 
+                                {url: 'url4', name: 'prod4', brand: 'brand1', distributor: 'dist1', category: 'Esquentador', 
                                 'more-details': {at4: 'haha'}, rating: 3, 'num-reviews': 2, price: 1},
-                                {url: 'url5', name: 'prod5', brand: 'brand1', distributor: 'dist2', categories: 'Termoacumuladores', 
+                                {url: 'url5', name: 'prod5', brand: 'brand1', distributor: 'dist2', category: 'Termoacumulador', 
                                 rating: undefined, price: 1}];
 
         const urlsNoAttributes = ['url1', 'url3'];

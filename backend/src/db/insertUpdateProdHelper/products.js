@@ -26,11 +26,11 @@ async function getDistributorIds(productsNotInDB){
 
 async function getCategoryIds(productsNotInDB, distributorIds){
     // TODO: categoryTranslation? How to better deal with that
-    const categoryNamesInDB = Object.values(productsNotInDB).map((product) => product['categories']);
+    const categoryNamesInDB = Object.values(productsNotInDB).map((product) => product['category']);
 
     // TODO: Uncomment
     if(categoryNamesInDB.includes(undefined))
-        throw new Error(`undefined value in key 'categories'`);
+        throw new Error(`undefined value in key 'category'`);
 
     const query = `SELECT id, name, distributorID
                     FROM categories

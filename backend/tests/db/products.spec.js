@@ -36,9 +36,9 @@ describe('Function getCategoryIds', () => {
 
     it('Obtains a list of Ids of the Distributors in the scraped products that do not yet exist in the DB', async () => {
         const productsNotInDB = {
-            url1: {distributor: 'dist1', categories: 'Esquentadores'},
-            url2: {distributor: 'dist2', categories: 'Esquentadores'},
-            url3: {distributor: 'dist1', categories: 'Termoacumuladores'}
+            url1: {distributor: 'dist1', category: 'Esquentador'},
+            url2: {distributor: 'dist2', category: 'Esquentador'},
+            url3: {distributor: 'dist1', category: 'Termoacumulador'}
         };
         const distributorIds = [1, 2, 1];
 
@@ -56,11 +56,11 @@ describe('Function getCategoryIds', () => {
 
     it('Throws error when there is an undefined value', async () => {
         const productsNotInDB = {
-            url1: {categories: undefined}
+            url1: {category: undefined}
         };
         const distributorIds = [1, 2, 1];
 
-        await expect(getCategoryIds(productsNotInDB, distributorIds)).rejects.toThrow(`undefined value in key 'categories'`);
+        await expect(getCategoryIds(productsNotInDB, distributorIds)).rejects.toThrow(`undefined value in key 'category'`);
     });
 });
 
@@ -68,9 +68,9 @@ describe('Function getProductsToInsert', () => {
 
     it('Obtains a list of Ids of the Distributors in the scraped products that do not yet exist in the DB', async () => {
         const productsNotInDB = {
-            url1: {distributor: 'dist1', categories: 'Esquentadores', name: 'prod1', brand: 'brand1', url: 'url1'},
-            url2: {distributor: 'dist2', categories: 'Esquentadores', name: 'prod2', brand: 'brand1', url: 'url2'},
-            url3: {distributor: 'dist1', categories: 'Termoacumuladores', name: 'prod3', brand: 'brand2', url: 'url3'}
+            url1: {distributor: 'dist1', category: 'Esquentador', name: 'prod1', brand: 'brand1', url: 'url1'},
+            url2: {distributor: 'dist2', category: 'Esquentador', name: 'prod2', brand: 'brand1', url: 'url2'},
+            url3: {distributor: 'dist1', category: 'Termoacumulador', name: 'prod3', brand: 'brand2', url: 'url3'}
         };
         const idReviewsToInsert = [null, 1, 3];
         
@@ -90,9 +90,9 @@ describe('Function getProductsToInsert', () => {
 
     it(`Throws error when 'productsNotInDB' and 'idReviewsToInsert' have different length`, async () => {
         const productsNotInDB = {
-            url1: {distributor: 'dist1', categories: 'Esquentadores', name: 'prod1', brand: 'brand1', url: 'url1'},
-            url2: {distributor: 'dist2', categories: 'Esquentadores', name: 'prod2', brand: 'brand1', url: 'url2'},
-            url3: {distributor: 'dist1', categories: 'Termoacumuladores', name: 'prod3', brand: 'brand2', url: 'url3'}
+            url1: {distributor: 'dist1', category: 'Esquentador', name: 'prod1', brand: 'brand1', url: 'url1'},
+            url2: {distributor: 'dist2', category: 'Esquentador', name: 'prod2', brand: 'brand1', url: 'url2'},
+            url3: {distributor: 'dist1', category: 'Termoacumulador', name: 'prod3', brand: 'brand2', url: 'url3'}
         };
         const idReviewsToInsert = [null, 1];
         
