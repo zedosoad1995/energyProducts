@@ -1,13 +1,13 @@
 let axios = require('axios');
 const cheerio = require("cheerio");
 const Promise = require("bluebird");
-const {Worten} = require('../data/attributesTypes.json');
+const attrTypes = require('../data/attributesTypes.json');
 const {logger} = require('../../utils/logger');
 
 const antiIPBanConfigs = require('../utils/ipBlockedAxiosConfigs');
 
-const numberKeys = Worten['Numbers'];
-const boolKeys = Worten['Booleans'];
+const numberKeys = attrTypes['Numbers'];
+const boolKeys = attrTypes['Booleans'];
 
 function convertProdAttribute(val, type, key, url){
     if(type === 'Number'){

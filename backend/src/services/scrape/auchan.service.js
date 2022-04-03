@@ -1,6 +1,47 @@
 let axios = require('axios');
 const cheerio = require("cheerio");
 const _ = require('lodash');
+const {convertProductAttribute} = require('./utils');
+
+/*
+Classe eficiência energética - Eficiência Energética
+Consumo de energia anual - Consumo de Gás (Gj/annum) -> (kwh -> Gj, a conversao e feita com Gj*277.778)
+Capacidade - Capacidade (L/min)
+Potência - Potência (kW) / Potência (kW)_low / Potência (kW)_high / Potência (W) -> Tem os erros no auchan. Ha 1 com pot 529.1, mas penso que seja 5-29.1
+Dimensões LxAxP - Largura / Altura / Profundidade -> mm - cm
+Outras características - Mais Informações
+ean - EAN
+Tipo de Gás - Tipo de gás
+Ignição - Tipo de ignição
+*/
+
+const attributesDict = {
+    'Classe eficiência energética': 'Eficiência Energética',
+    'Consumo de energia anual': 'Consumo de Gás (Gj/annum)',
+    'Capacidade': 'Capacidade (L/min)',
+    'Potência': 'Potência (kW)',
+    'Outras características': 'Mais Informações',
+    'Tipo de Gás': 'Tipo de gás',
+    'Ignição': 'Tipo de ignição'
+}
+
+function assignProductAttribute(prodAttributes, key, value){
+    if(key === 'Dimensões LxAxP'){
+        // TODO: Há valores que são erros humanos. Rever
+        [largura, altura, profundidade] = value.replace(/[\sm]/g, '').split(/[xX]+/);
+
+        prodAttributes['Largura'] = largura ? String(Number(largura)/10) : null;
+        prodAttributes['Altura'] = altura ? String(Number(altura)/10) : null;
+        prodAttributes['Profundidade'] = profundidade ? String(Number(profundidade)/10) : null;
+        return;
+    }
+
+    if(key in attributesDict){
+        key = attributesDict[key];
+    }
+
+    prodAttributes[key] = convertProductAttribute(key, value, 'Auchan');
+}
 
 function getProductDetails(url){
     return axios.get(url)
@@ -11,10 +52,11 @@ function getProductDetails(url){
             $('h3.attribute-name').each((i, e) => {
                 const attrName = $(e).text().trim();
                 const attrValue = $(`li.attribute-values`).eq(i).text().trim();
-                prodAttributes[attrName] = attrValue;
+
+                assignProductAttribute(prodAttributes, attrName, attrValue);
             });
 
-            prodAttributes['ean'] = $('span.product-ean').text()
+            prodAttributes['EAN'] = $('span.product-ean').text()
 
             return prodAttributes;
         })
@@ -35,7 +77,7 @@ function normalizeProductDetails(mainDetailsArr, otherDetailsArr){
         allDetails['rating'] = null;
         allDetails['num-reviews'] = null;
 
-        allDetails = _.omit(allDetails, ['Marca', 'dimension6', 'dimension7', 'dimension11', 'id', 'Modelo', 'Marca']);
+        allDetails = _.omit(allDetails, ['Marca', 'dimension6', 'dimension7', 'dimension11', 'id', 'Modelo', 'Marca', 'position']);
 
         prodDetailsArr.push(allDetails);
     })
@@ -98,8 +140,36 @@ class AuchanScraper{
 
 const scraper = new AuchanScraper();
 scraper.getProducts('https://www.auchan.pt/on/demandware.store/Sites-AuchanPT-Site/pt_PT/Search-UpdateGrid?cgid=aquecimento-agua&srule=price-high-to-low&prefn1=soldInStores&prefv1=000&isSort=true')
-.then(prods => console.log(prods.length));
+.then(prods => {
+    let attributes = {};
+
+    prods.forEach(prod => {
+        Object.entries(prod).forEach(([key, val]) => {
+            if(key in attributes){
+                attributes[key].push(val);
+            }else{
+                attributes[key] = [val];
+            }
+        })
+    })
+
+    console.log(attributes);
+});
 
 module.exports = {
     AuchanScraper
 }
+
+/*
+Classe eficiência energética - Eficiência Energética
+Consumo de energia anual - Consumo de Gás (Gj/annum) -> (kwh -> Gj, a conversao e feita com Gj*277.778)
+Capacidade - Capacidade (L/min)
+Potência - Potência (kW) / Potência (kW)_low / Potência (kW)_high / Potência (W) -> Tem os erros no auchan. Ha 1 com pot 529.1, mas penso que seja 5-29.1
+Dimensões LxAxP - Largura / Altura / Profundidade -> mm - cm
+Outras características - Mais Informações
+ean - EAN
+Informação de Marketing - Mais Informações
+Tipo de Gás - Tipo de gás
+Ignição - Tipo de ignição
+Regulador de temperatura - Regulador de temperatura
+*/
