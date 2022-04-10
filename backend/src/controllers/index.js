@@ -4,7 +4,6 @@ const Promise = require("bluebird");
 const {getProductCatalogUrls, updateDBWithScrapedProducts, getProductUrlsInDB} = require('../db/queries');
 const {logger} = require('../utils/logger');
 const {getProductAttrNames} = require('../db/queries');
-const {preprocessScrapedData} = require('../services/scrape/utils');
 
 async function wortenScraper(_, res, next){
 
@@ -18,13 +17,11 @@ async function wortenScraper(_, res, next){
         const prodAttrNames = await getProductAttrNames().then(Object.keys)
 
         // scrape products
-        let scrapedProds = await Promise.map(urls,
+        const scrapedProds = await Promise.map(urls,
                 url => new WortenScraper(urlsWithAttributes, prodAttrNames).getProducts(url),
                 { concurrency: 2 }
             )
             .then(res => [].concat.apply([], res));
-
-        scrapedProds = preprocessScrapedData(scrapedProds);
 
         await updateDBWithScrapedProducts(scrapedProds, urlsNoAttributes)
     }catch(err){

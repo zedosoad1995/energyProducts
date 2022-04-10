@@ -1,0 +1,76 @@
+{
+    "convertAttributeValue": [
+        {
+            "input": {
+                "key": "Potência (kW)",
+                "value": "100 Euros",
+                "distributor": "Worten"
+            },
+            "output": {
+                "Potência (kW)": "100"
+            }
+        },
+        {
+            "input": {
+                "key": "Potência (kW)",
+                "value": "    100 Euros asdds",
+                "distributor": "Worten"
+            },
+            "output": {
+                "Potência (kW)": "100"
+            }
+        },
+        {
+            "input": {
+                "key": "Potência (kW)",
+                "value": "100,2 Euros",
+                "distributor": "Worten"
+            },
+            "output": {
+                "Potência (kW)": "100.2"
+            }
+        },
+        {
+            "input": {
+                "key": "Potência (kW)",
+                "value": ".2Euros",
+                "distributor": "Worten"
+            },
+            "output": {
+                "Potência (kW)": "0.2"
+            }
+        },
+        {
+            "input": {
+                "key": "Potência (kW)",
+                "value": "1.,1",
+                "distributor": "Worten"
+            },
+            "output": {
+                "Potência (kW)": "1.1"
+            }
+        },
+        {
+            "input": {
+                "key": "Potência (kW)",
+                "value": "1/24",
+                "distributor": "Worten"
+            },
+            "output": {
+                "Potência (kW) Min.": "1",
+                "Potência (kW) Max.": "24"
+            }
+        },
+        {
+            "input": {
+                "key": "Potência (kW)",
+                "value": "1-24.4",
+                "distributor": "Worten"
+            },
+            "output": {
+                "Potência (kW) Min.": "1",
+                "Potência (kW) Max.": "24.4"
+            }
+        }
+    ]
+}

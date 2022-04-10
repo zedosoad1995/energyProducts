@@ -1,13 +1,8 @@
 let axios = require('axios');
 const cheerio = require("cheerio");
 const Promise = require("bluebird");
-const attrTypes = require('../data/attributesTypes.json');
 const {logger} = require('../../utils/logger');
-
-const antiIPBanConfigs = require('../utils/ipBlockedAxiosConfigs');
-
-const numberKeys = attrTypes['Numbers'];
-const boolKeys = attrTypes['Booleans'];
+const {convertAttributeValue, translateCategory} = require('./scrapeHelper');
 
 function convertProdAttribute(val, type, key, url){
     if(type === 'Number'){
@@ -91,18 +86,15 @@ class WortenScraper{
         productObj['description'] = product['description'];
         productObj['rating'] = (isNaN(Number(product['rating_bazaar'])))? null: Number(product['rating_bazaar']);
         productObj['num-reviews'] = (isNaN(Number(product['reviews_bazaar'])))? null: Number(product['reviews_bazaar']);
-        productObj['category'] = product['category_path'][product['category_path'].length-1];
-        productObj['url'] = product['default_url'];
+        productObj['category'] = translateCategory(product['category_path'][product['category_path'].length-1]);
+        productObj['url'] = "https://www.worten.pt" + product['default_url'];
         productObj['price'] = product['price'];
 
-        const productDetailsUrl = "https://www.worten.pt" + productObj['url']
+        const productDetailsUrl = productObj['url']
         const hasProductAttributesInDB = this.#urlsWithAttributes.includes(productObj['url']);
 
         // Get more details of product. Assumes these values are static, therefore it only obtains once (when it is a new product)
         if(!hasProductAttributesInDB){
-            const axiosConfig = {
-                headers: antiIPBanConfigs
-            };
 
             await axios.get(productDetailsUrl, axiosConfig).then(resp => {
                 const $ = cheerio.load(resp.data);
@@ -119,21 +111,8 @@ class WortenScraper{
                         logger.info(`New Attribute Added: '${key}', from product: ${productDetailsUrl}`);
                     }
 
-                    let attrType = 'NoType';
-                    if(numberKeys.includes(key)){
-                        attrType = 'Number';
-                    }else if(boolKeys.includes(key)){
-                        attrType = 'Bool';
-                    }
-
-                    const convertedVal = convertProdAttribute(attrValue, attrType, key, productDetailsUrl);
-
-                    if(Array.isArray(convertedVal)){
-                        productObj['more-details'][key+'_low'] = convertedVal[0];
-                        productObj['more-details'][key+'_high'] = convertedVal[1];
-                    }else{
-                        productObj['more-details'][key] = convertedVal;
-                    }
+                    const convertedVal = convertAttributeValue(key, attrValue, 'Worten');
+                    productObj['more-details'] = {...productObj['more-details'], ...convertedVal};
                 })
             }).catch(function (error) {
                 throw error;
@@ -151,9 +130,6 @@ class WortenScraper{
                 'x-render-events': 'product_filters:changed',
             }
         };
-
-        // Anti IP ban
-        axiosConfig['headers'] = {...axiosConfig['headers'], ...antiIPBanConfigs};
         
         let pageNum = 1;
         let lastPage = false;
@@ -166,7 +142,6 @@ class WortenScraper{
             let productsInfo = await getPageProductsInfo(urlPage, axiosConfig);
 
             // get product details
-            // TODO: return val, instead of pass by reference
             await Promise.map(productsInfo['products'],
                 product => this.#getProductInfo(product),
                 { concurrency: 6 }
