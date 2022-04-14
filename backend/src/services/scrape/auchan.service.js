@@ -2,6 +2,8 @@ let axios = require('axios');
 const cheerio = require("cheerio");
 const _ = require('lodash');
 const {convertAttributeValue, translateCategory} = require('./scrapeHelper');
+const {logger} = require('../../utils/logger')
+
 
 /*
 Classe eficiência energética - Eficiência Energética
@@ -14,29 +16,6 @@ ean - EAN
 Tipo de Gás - Tipo de gás
 Ignição - Tipo de ignição
 */
-
-function getProductDetails(url){
-    return axios.get(url)
-        .then(resp => {
-            const $ = cheerio.load(resp.data);
-
-            let prodAttributes = { url }
-            $('h3.attribute-name').each((i, e) => {
-                const attrName = $(e).text().trim();
-                const attrValue = $(`li.attribute-values`).eq(i).text().trim();
-
-                const convertedObj = convertAttributeValue(attrName, attrValue, 'Auchan');
-                prodAttributes = {...prodAttributes, ...convertedObj};
-            });
-
-            prodAttributes['EAN'] = $('span.product-ean').text()
-
-            return prodAttributes;
-        })
-        .catch(err => {
-            throw(err);
-        });
-}
 
 function normalizeProductDetails(mainDetailsArr, otherDetailsArr){
     prodDetailsArr = []
@@ -61,9 +40,42 @@ function normalizeProductDetails(mainDetailsArr, otherDetailsArr){
 class AuchanScraper{
 
     static #baseUrl = 'https://www.auchan.pt';
+    #existingAttrNames;
 
-    constructor(){
+    constructor(attrNames){
+        this.#existingAttrNames = attrNames;
     }
+
+    getProductDetails(url){
+        return axios.get(url)
+            .then(resp => {
+                const $ = cheerio.load(resp.data);
+                const that = this
+    
+                let prodAttributes = { url }
+                $('h3.attribute-name').each((i, e) => {
+                    const attrName = $(e).text().trim();
+                    const attrValue = $(`li.attribute-values`).eq(i).text().trim();
+    
+                    const convertedObj = convertAttributeValue(attrName, attrValue, 'Auchan', url);
+                    prodAttributes = {...prodAttributes, ...convertedObj};
+
+                    const convKey = Object.keys(convertedObj)[0]
+                    if(!that.#existingAttrNames.includes(convKey)){
+                        that.#existingAttrNames.push(convKey);
+                        logger.info(`New Attribute Added: '${convKey}', from product: ${url}`);
+                    }
+                });
+    
+                prodAttributes['EAN'] = $('span.product-ean').text()
+    
+                return prodAttributes;
+            })
+            .catch(err => {
+                throw(err);
+            });
+    }
+    
 
     async getProducts(url){
 
@@ -71,6 +83,8 @@ class AuchanScraper{
         const size = 10;
 
         let scrapedProducts = [];
+
+        const that = this
 
         while(true){
             const numProducts = await axios.get(url + `&start=${offset}&sz=${size}`)
@@ -87,7 +101,7 @@ class AuchanScraper{
                         mainProdDetails['url'] = prodUrl;
                         mainProdsDetails.push(mainProdDetails);
 
-                        prodDetailsPromises.push(getProductDetails(prodUrl));
+                        prodDetailsPromises.push(that.getProductDetails(prodUrl));
                     });
 
                     const productDetails = await Promise.all(prodDetailsPromises)
@@ -109,7 +123,7 @@ class AuchanScraper{
     }
 }
 
-const scraper = new AuchanScraper();
+const scraper = new AuchanScraper([]);
 scraper.getProducts('https://www.auchan.pt/on/demandware.store/Sites-AuchanPT-Site/pt_PT/Search-UpdateGrid?cgid=aquecimento-agua&srule=price-high-to-low&prefn1=soldInStores&prefv1=000&isSort=true')
 .then(prods => {
     let attributes = {};

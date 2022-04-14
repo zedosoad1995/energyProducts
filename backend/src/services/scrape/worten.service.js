@@ -4,39 +4,6 @@ const Promise = require("bluebird");
 const {logger} = require('../../utils/logger');
 const {convertAttributeValue, translateCategory} = require('./scrapeHelper');
 
-function convertProdAttribute(val, type, key, url){
-    if(type === 'Number'){
-        const convValueStr = val.trim()
-                            .split(' ')[0]
-                            .replace(/[^\d.,\/-]/g, ' ')
-                            .replace(",", ".")
-                            .replace("..", ".")
-
-        if(/^\d+(?:\.\d+)?[\/-]\d+(?:\.\d+)?/.test(convValueStr))
-            return convValueStr.match(/^(\d+(?:\.\d+)?)[\/-](\d+(?:\.\d+)?)/).slice(1).map(Number).map(String);
-
-        const convValue = String(Number(convValueStr));
-        
-        if(convValueStr.trim().length === 0 || convValueStr[0] === ' ' || isNaN(convValue)){
-            logger.warn(`Invalid format for attribute type Number. Value received: '${val}' for attribute ${key} in '${url}'`);
-        }
-
-        return convValue;
-
-    }else if(type === 'Bool'){
-        if(val === 'Sim'){
-            return 'true';
-        }else if(val === 'Não'){
-            return 'false';
-        }else{
-            logger.warn(`Invalid boolean value to convert. It can only have the following values: Sim, Não.\nInstead it has the value: ${val}`);
-            throw new Error(`Invalid boolean value to convert. It can only have the following values: Sim, Não.\nInstead it has the value: ${val}`);
-        }
-    }
-
-    return val
-}
-
 function getPageProductsInfo(url, axiosConfig){
     return axios.get(url, axiosConfig)
         .then(resp => {
@@ -64,13 +31,11 @@ class WortenScraper{
     #urlsWithAttributes;
     #prodAttrNames;
     #scrapedProducts;
-    #newAttributes;
 
     constructor(urls, attrNames){
         this.#urlsWithAttributes = urls;
         this.#prodAttrNames = attrNames;
         this.#scrapedProducts = [];
-        this.#newAttributes = [];
     }
 
     async #getProductInfo(product){
@@ -106,8 +71,8 @@ class WortenScraper{
                     const key = $(e).find('.details-label').contents().last().text();
                     const attrValue = $(e).find('.details-value').text();
 
-                    if(!(that.#prodAttrNames.includes(key) || that.#newAttributes.includes(key))){
-                        that.#newAttributes.push(key);
+                    if(!that.#prodAttrNames.includes(key)){
+                        that.#prodAttrNames.push(key);
                         logger.info(`New Attribute Added: '${key}', from product: ${productDetailsUrl}`);
                     }
 

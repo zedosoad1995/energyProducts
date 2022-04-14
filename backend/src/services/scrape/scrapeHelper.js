@@ -1,8 +1,8 @@
 const categoriesDict = require('../data/categoriesTranslation.json');
 const attrTypes = require('../data/attributesTypes.json');
 const prodAttributesTranslations = require('../data/prodAttributesTranslations.json');
-const attributesConsts = require('../data/possibleAttributeValues');
 const {isObject} = require('../../utils/index')
+const {logger} = require('../../utils/logger')
 
 function translateCategory(value){
     valueLower = value.toLowerCase()
@@ -17,7 +17,7 @@ function translateAttributeName(key){
     return key
 }
 
-function convertAttributeValue(key, value, distributor){
+function convertAttributeValue(key, value, distributor, url){
     const conversionFunctions = {
         'Consumo de Gás (Gj/annum)': convConsumoGas,
         'Potência (kW)': convPotencia,
@@ -43,9 +43,9 @@ function convertAttributeValue(key, value, distributor){
     
     // General conversions
     if(attrTypes['Numbers'].includes(key)){
-        value = convGeneralNumber(value, distributor);
+        value = convGeneralNumber(value, distributor, key, url);
     }else if(attrTypes['Booleans'].includes(key)){
-        value = convGeneralBoolean(value)
+        value = convGeneralBoolean(value, key, url)
     }
 
     const retValue = {}
@@ -54,22 +54,26 @@ function convertAttributeValue(key, value, distributor){
     return retValue;
 }
 
-function convGeneralNumber(value, distributor){
+function convGeneralNumber(value, distributor, key, url){
     if(distributor === 'Worten'){
         value = value.trim()
                     .split(' ')[0]
                     .replace(/[^\d.,]/g, ' ')
                     .replace(/[.,]+/g, ".");
 
-        value = String(Number(value))
+        convValue = String(Number(value))
     }else if(distributor === 'Auchan'){
-        value = value.split(' ')[0].replace(/[^0-9.]/g, '');
+        convValue = value.split(' ')[0].replace(/[^0-9.]/g, '');
+    }
+    
+    if(convValue.trim().length === 0 || isNaN(convValue)){
+        logger.warn(`Invalid format for attribute type Number. Value received: '${value}' for attribute ${key} in '${url}'`)
     }
 
-    return value;
+    return convValue;
 }
 
-function convGeneralBoolean(value){
+function convGeneralBoolean(value, key, url){
     value = value.split(' ')[0].toLowerCase();
 
     if(['sim', 'automático', 'automatico'].includes(value)){
@@ -77,7 +81,7 @@ function convGeneralBoolean(value){
     }else if(['não'].includes(value)){
         value = false;
     }else{
-        throw new Error(`Invalid value to convert to boolean: ${value}.`);
+        logger.warn(`Invalid Boolean value to convert. Value received: '${value}' for attribute ${key} in '${url}'`)
     }
 
     return value;
