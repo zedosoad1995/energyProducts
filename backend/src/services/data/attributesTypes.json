@@ -2,7 +2,7 @@
     "Numbers": [
         "Capacidade (L/min)", "Pressão (bar)", "Potência (W)", "Peso", "Altura", "Largura", "Profundidade", "Temperatura Mínima (ºC)",
         "Caudal Min.", "Caudal Máx.", "Potência (kW)", "Pressão máxima (bar)", "Tubo de Exaustão (mm)", "Consumo de Gás (Gj/annum)", "Temperatura Máxima (ºC)",
-        "Diâmetro", "Nível Emissões Ruido", "Quantidade Liquida"
+        "Diâmetro", "Nível Emissões Ruido", "Quantidade Liquida", "Diâmetro tubo evacuação gases"
     ],
     "Booleans": [
         "Regulador de temperatura", "Válvula segurança", "Válvula de descarga", "Ecrã Digital",

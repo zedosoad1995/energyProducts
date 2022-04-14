@@ -1,6 +1,8 @@
 const categoriesDict = require('../data/categoriesTranslation.json');
 const attrTypes = require('../data/attributesTypes.json');
 const prodAttributesTranslations = require('../data/prodAttributesTranslations.json');
+const attributesConsts = require('../data/possibleAttributeValues');
+const {isObject} = require('../../utils/index')
 
 function translateCategory(value){
     valueLower = value.toLowerCase()
@@ -16,21 +18,28 @@ function translateAttributeName(key){
 }
 
 function convertAttributeValue(key, value, distributor){
-    key = translateAttributeName(key)
-
     const conversionFunctions = {
         'Consumo de Gás (Gj/annum)': convConsumoGas,
         'Potência (kW)': convPotencia,
         'Potência (W)': convPotenciaWatt,
-        'Dimensões LxAxP': convDimensions
+        'Dimensões LxAxP': convDimensions,
     };
 
-    if(key in conversionFunctions){
-        value = conversionFunctions[key](value, distributor);
-        if(typeof value === 'object' && value !== null){
+    convertedKey = translateAttributeName(key)
+
+    if(key in conversionFunctions || convertedKey in conversionFunctions){
+        if(key in conversionFunctions){
+            value = conversionFunctions[key](value, distributor);
+        }else{
+            value = conversionFunctions[convertedKey](value, distributor);
+        }
+
+        if(isObject(value)){
             return value;
         }
     }
+
+    key = convertedKey
     
     // General conversions
     if(attrTypes['Numbers'].includes(key)){
@@ -82,12 +91,11 @@ function convConsumoGas(value, distributor){
     return value
 }
 
+// 'Potência (W)'
 function convPotenciaWatt(value, distributor){
     value = convPotencia(value, distributor)
 
-    return {
-        'Potência (kW)': String(Number(value)/1000)
-    }
+    return String(Number(value)/1000)
 }
 
 // 'Potência (kW)'

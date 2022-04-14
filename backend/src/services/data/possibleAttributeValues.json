@@ -1,0 +1,7 @@
+{
+    "tipo_ingnicao": {
+        "ELETRONICO": "Eletrónico",
+        "PILHAS": "Pilhas",
+        "HIDROGENADOR": "Hidrogenador"
+    }
+}
