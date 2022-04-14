@@ -132,5 +132,4 @@ class WortenScraper{
 module.exports = {
     WortenScraper,
     getPageProductsInfo,
-    convertProdAttribute
 }
