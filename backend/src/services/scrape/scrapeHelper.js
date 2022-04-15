@@ -23,6 +23,7 @@ function convertAttributeValue(key, value, distributor, url){
         'Potência (kW)': convPotencia,
         'Potência (W)': convPotenciaWatt,
         'Dimensões LxAxP': convDimensions,
+        'Tubo de Exaustão (mm)': convTuboExaustao,
     };
 
     convertedKey = translateAttributeName(key)
@@ -56,18 +57,18 @@ function convertAttributeValue(key, value, distributor, url){
 
 function convGeneralNumber(value, distributor, key, url){
     if(distributor === 'Worten'){
-        value = value.trim()
+        convValue = value.trim()
                     .split(' ')[0]
                     .replace(/[^\d.,]/g, ' ')
                     .replace(/[.,]+/g, ".");
 
-        convValue = String(Number(value))
+        convValue = String(Number(convValue))
     }else if(distributor === 'Auchan'){
         convValue = value.split(' ')[0].replace(/[^0-9.]/g, '');
     }
     
     if(convValue.trim().length === 0 || isNaN(convValue)){
-        logger.warn(`Invalid format for attribute type Number. Value received: '${value}' for attribute ${key} in '${url}'`)
+        logger.warn(`Invalid format for attribute type Number. Value received: '${value}' for attribute '${key}' in '${url}'`)
     }
 
     return convValue;
@@ -81,7 +82,7 @@ function convGeneralBoolean(value, key, url){
     }else if(['não'].includes(value)){
         value = false;
     }else{
-        logger.warn(`Invalid Boolean value to convert. Value received: '${value}' for attribute ${key} in '${url}'`)
+        logger.warn(`Invalid Boolean value to convert. Value received: '${value}' for attribute '${key}' in '${url}'`)
     }
 
     return value;
@@ -124,6 +125,23 @@ function convPotencia(value, distributor){
         }
 
         value = numericValue;
+    }
+
+    return value
+}
+
+convTuboExaustao
+function convTuboExaustao(value, distributor){
+    if(distributor === 'Worten'){
+        value = value.split(/[-\/]/g);
+        if(value.length > 1){
+            value = {
+                'Tubo de Exaustão (mm) Min.': value[0],
+                'Tubo de Exaustão (mm) Max.': value[1],
+            }
+        }else{
+            value = value[0];
+        }
     }
 
     return value

@@ -61,7 +61,7 @@ class WortenScraper{
         // Get more details of product. Assumes these values are static, therefore it only obtains once (when it is a new product)
         if(!hasProductAttributesInDB){
 
-            await axios.get(productDetailsUrl, axiosConfig).then(resp => {
+            await axios.get(productDetailsUrl).then(resp => {
                 const $ = cheerio.load(resp.data);
 
                 productObj['more-details'] = {};
@@ -76,7 +76,7 @@ class WortenScraper{
                         logger.info(`New Attribute Added: '${key}', from product: ${productDetailsUrl}`);
                     }
 
-                    const convertedVal = convertAttributeValue(key, attrValue, 'Worten');
+                    const convertedVal = convertAttributeValue(key, attrValue, 'Worten', productDetailsUrl);
                     productObj['more-details'] = {...productObj['more-details'], ...convertedVal};
                 })
             }).catch(function (error) {
