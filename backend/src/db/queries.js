@@ -18,7 +18,7 @@ async function getProductCatalogUrls(dist){
     const query =   `SELECT dist.name AS distributorName, cat.name AS categoryName, CONCAT(dist.url, cat.url) AS fullUrl
                     FROM categories cat
                     INNER JOIN distributors dist
-                    ON cat.distributorID = dist.id
+                        ON cat.distributorID = dist.id
                     WHERE dist.name IN (?);`;
 
     const res = await dbQuery(query, [dist])
@@ -63,12 +63,19 @@ async function getProductUrlsInDB(dist){
         });
 }
 
-async function getProductAttrNames(){
+async function getProductAttrNames(distributor){
     const query = `
         SELECT DISTINCT attributeName, datatype
-        FROM productAttributes;`;
+        FROM productAttributes pa
+        INNER JOIN products p
+            ON p.id = pa.productID
+        INNER JOIN distributors dist
+            ON p.distributorID = dist.id
+        WHERE dist.name = ? OR ?;`;
 
-    return dbQuery(query)
+    const showAll = distributor ? false : true
+
+    return dbQuery(query, [distributor, showAll])
         .then(attrs => attrs.reduce((obj, val) => {
             obj[val['attributeName']] = val['datatype'];
             return obj;

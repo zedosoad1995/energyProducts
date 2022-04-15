@@ -70,11 +70,15 @@ async function getInsertedIds_Reviews(lenIdsToUpdate, hasReview){
         FROM reviews
         WHERE id >= LAST_INSERT_ID();`;
 
-    const ids = await dbQuery(query)
-    .then(res => res.map(row => row['id']))
-    .catch(error => {
-        throw(error);
-    });
+    let ids = []
+
+    if(hasReview.some(Boolean)){
+        ids = await dbQuery(query)
+        .then(res => res.map(row => row['id']))
+        .catch(error => {
+            throw(error);
+        });
+    }
 
     const idReviewToUpdate = ids.slice(0, lenIdsToUpdate);
     const idReviewToInsert = await getIdReviewToInsert(ids.slice(lenIdsToUpdate, lenIdsToUpdate + hasReview.length), hasReview);

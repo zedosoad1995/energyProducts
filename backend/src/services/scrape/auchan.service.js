@@ -37,8 +37,6 @@ function normalizeProductDetails(catalogDetailsArr, prodDetailsArr){
         normalizedProdArr.push(normalizedProd)
     })
 
-    console.log(normalizedProdArr)
-
     return normalizedProdArr;
 }
 
@@ -132,7 +130,7 @@ class AuchanScraper{
     }
 }
 
-const scraper = new AuchanScraper([]);
+/* const scraper = new AuchanScraper([]);
 scraper.getProducts('https://www.auchan.pt/on/demandware.store/Sites-AuchanPT-Site/pt_PT/Search-UpdateGrid?cgid=aquecimento-agua&srule=price-high-to-low&prefn1=soldInStores&prefv1=000&isSort=true')
 .then(prods => {
     let attributes = {};
@@ -148,7 +146,7 @@ scraper.getProducts('https://www.auchan.pt/on/demandware.store/Sites-AuchanPT-Si
     })
 
     console.log(attributes);
-});
+}); */
 
 module.exports = {
     AuchanScraper

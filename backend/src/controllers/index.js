@@ -1,24 +1,41 @@
 const { WortenScraper } = require('../services/scrape/worten.service');
+const { AuchanScraper } = require('../services/scrape/auchan.service');
+
 const { getAllAtributeNames, ProductsQuery } = require('../services/products.service');
 const Promise = require("bluebird");
-const {getProductCatalogUrls, updateDBWithScrapedProducts, getProductUrlsInDB} = require('../db/queries');
+const {
+    getProductCatalogUrls, 
+    updateDBWithScrapedProducts, 
+    getProductUrlsInDB, 
+    getProductAttrNames
+} = require('../db/queries');
 const {logger} = require('../utils/logger');
-const {getProductAttrNames} = require('../db/queries');
 
-async function wortenScraper(_, res, next){
 
-    logger.info(`Starting scraping of Worten...`);
+async function scrape(req, res, next){
+
+    const distributor = req.body.distributor
+
+    logger.info(`Starting scraping of ${distributor}...`);
 
     try{
-        const urls = await getProductCatalogUrls('Worten')
+        let urls = await getProductCatalogUrls(distributor)
+        urls = [...new Set(urls)]
 
-        const {urlsWithAttributes, urlsNoAttributes} = await getProductUrlsInDB('Worten')
+        const {urlsWithAttributes, urlsNoAttributes} = await getProductUrlsInDB(distributor)
 
-        const prodAttrNames = await getProductAttrNames().then(Object.keys)
+        const prodAttrNames = await getProductAttrNames(distributor).then(Object.keys)
 
         // scrape products
+        let scraper
+        if(distributor === 'Worten'){
+            scraper = new WortenScraper(urlsWithAttributes, prodAttrNames);
+        }else if(distributor === 'Auchan'){
+            scraper = new AuchanScraper(prodAttrNames);
+        }
+
         const scrapedProds = await Promise.map(urls,
-                url => new WortenScraper(urlsWithAttributes, prodAttrNames).getProducts(url),
+                url => scraper.getProducts(url),
                 { concurrency: 2 }
             )
             .then(res => [].concat.apply([], res));
@@ -31,7 +48,7 @@ async function wortenScraper(_, res, next){
         return;
     }
 
-    logger.info(`Worten products successfully scraped.\n`);
+    logger.info(`${distributor} products successfully scraped.\n`);
 
     res.sendStatus(201);
 }
@@ -77,7 +94,7 @@ async function getAllAttrNames(req, res, next){
 }
 
 module.exports = {
-    wortenScraper,
+    scrape,
     getProducts,
     getAllAttrNames
 }
