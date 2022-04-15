@@ -113,7 +113,9 @@ class AuchanScraper{
         let scrapedProducts = [];
 
         while(true){
-            const numProducts = await axios.get(url + `&start=${offset}&sz=${size}`)
+            let fullUrl = url + '&srule=price-high-to-low&prefn1=soldInStores&prefv1=000&isSort=true' + 
+                            `&start=${offset}&sz=${size}`
+            const numProducts = await axios.get(fullUrl)
                 .then(async resp => {
                     const [catalogPageDetails, productPageDetails] = await this.getProductDetails(resp.data)
 
@@ -129,24 +131,6 @@ class AuchanScraper{
         return scrapedProducts;
     }
 }
-
-/* const scraper = new AuchanScraper([]);
-scraper.getProducts('https://www.auchan.pt/on/demandware.store/Sites-AuchanPT-Site/pt_PT/Search-UpdateGrid?cgid=aquecimento-agua&srule=price-high-to-low&prefn1=soldInStores&prefv1=000&isSort=true')
-.then(prods => {
-    let attributes = {};
-
-    prods.forEach(prod => {
-        Object.entries(prod).forEach(([key, val]) => {
-            if(key in attributes){
-                attributes[key].push(val);
-            }else{
-                attributes[key] = [val];
-            }
-        })
-    })
-
-    console.log(attributes);
-}); */
 
 module.exports = {
     AuchanScraper

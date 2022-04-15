@@ -32,13 +32,20 @@ async function scrape(req, res, next){
             scraper = new WortenScraper(urlsWithAttributes, prodAttrNames);
         }else if(distributor === 'Auchan'){
             scraper = new AuchanScraper(prodAttrNames);
+        }else{
+            res.sendStatus(404);
         }
 
-        const scrapedProds = await Promise.map(urls,
+        /* const scrapedProds = await Promise.map(urls,
                 url => scraper.getProducts(url),
                 { concurrency: 2 }
             )
-            .then(res => [].concat.apply([], res));
+            .then(res => [].concat.apply([], res)); */
+
+        let scrapedProds = []
+        for(url of urls){
+            scrapedProds = [...scrapedProds, ...await scraper.getProducts(url)]
+        }
 
         await updateDBWithScrapedProducts(scrapedProds, urlsNoAttributes)
     }catch(err){

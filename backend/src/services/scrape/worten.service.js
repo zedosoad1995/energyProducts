@@ -99,7 +99,7 @@ class WortenScraper{
         let pageNum = 1;
         let lastPage = false;
 
-        this.scrapedProducts = [];
+        this.#scrapedProducts = [];
 
         while(!lastPage){
 

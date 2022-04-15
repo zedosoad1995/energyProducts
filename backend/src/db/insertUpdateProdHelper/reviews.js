@@ -16,13 +16,17 @@ async function getReviewsToInsert_ProdInDB(productsInDB, urlsInDBWithNewReview){
                 FROM products 
                 WHERE url IN (?) AND reviewsID IS NULL;`;
 
+    const retObj = {'idProdToUpdate': [], 'reviewsToInsert_ProdInDB': []}
+    if(urlsInDBWithNewReview.length === 0){
+        return retObj
+    }
     return await dbQuery(query, [urlsInDBWithNewReview])
         .then(res => {
             return res.reduce((obj, row) => {
                     obj['idProdToUpdate'].push(row['id']);
                     obj['reviewsToInsert_ProdInDB'].push([null, productsInDB[row['url']]['rating'], productsInDB[row['url']]['num-reviews']]);
                     return obj;
-                }, {'idProdToUpdate': [], 'reviewsToInsert_ProdInDB': []});
+                }, retObj);
         })
         .catch(error => {
             throw(error);
